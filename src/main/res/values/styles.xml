@@ -1,0 +1,69 @@
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <style name="AppTheme.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+    <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+
+    <style name="HintText" parent="TextAppearance.Design.Hint">
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">@color/colorPrimary</item>
+    </style>
+
+    <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light">
+        <item name="colorControlNormal">@color/colorDarkGray</item>
+        <item name="android:textColorPrimary">@color/colorDarkGray</item>
+    </style>
+
+    <style name="checkBoxStyle" parent="Theme.AppCompat.Light">
+        <item name="colorControlNormal">@color/colorDarkGray</item>
+        <item name="colorControlActivated">@color/colorBlack</item>
+    </style>
+
+    <style name="SimpleDialog" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <!-- Used for the buttons -->
+        <item name="colorAccent">@color/colorPrimaryDark</item>
+        <!-- Used for the text -->
+        <item name="android:textColorPrimary">@color/colorDarkGray</item>
+        <!-- Used for the title -->
+        <item name="android:textColor">@color/colorPrimaryDark</item>
+        <!-- Used for the background -->
+        <item name="android:background">@color/colorWhite</item>
+    </style>
+
+    <style name="SimpleBlackDialog" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <!-- Used for the buttons -->
+        <item name="colorAccent">@color/colorBlack</item>
+        <!-- Used for the text -->
+        <item name="android:textColorPrimary">@color/colorDarkGray</item>
+        <!-- Used for the title -->
+        <item name="android:textColor">@color/colorBlack</item>
+        <!-- Used for the background -->
+        <item name="android:background">@color/colorWhite</item>
+    </style>
+
+    <style name="AppTheme.Dark.Dialog" parent="Theme.AppCompat.Dialog">
+        <item name="colorAccent">@color/colorWhite</item>
+        <item name="android:textColorPrimary">@color/colorWhite</item>
+        <item name="android:background">@color/colorPrimary</item>
+    </style>
+
+    <style name="ActionBarIcon" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
+        <item name="android:textColorPrimary">@color/colorWhite</item>
+    </style>
+
+    <style name="AppTheme.WebProgress">
+        <item name="colorAccent">@color/colorPrimaryDark</item>
+    </style>
+
+</resources>

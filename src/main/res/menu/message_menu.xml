@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/favorite"
+        android:orderInCategory="100"
+        android:title="Add to favorite" />
+    <item
+        android:id="@+id/play"
+        android:orderInCategory="101"
+        android:title="View" />
+    <item
+        android:id="@+id/info"
+        android:orderInCategory="102"
+        android:title="Info" />
+</menu>
