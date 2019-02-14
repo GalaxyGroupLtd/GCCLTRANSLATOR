@@ -5,9 +5,11 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,6 +21,7 @@ import com.carpa.library.utilities.DataFactory;
 import com.carpa.library.utilities.Popup;
 import com.carpa.library.utilities.Progress;
 import com.carpa.library.utilities.adapter.FavoriteAdapter;
+import com.carpa.library.utilities.loader.FavoriteLocalLoader;
 import com.carpa.library.utilities.loader.LocalMessageLoader;
 
 import java.io.IOException;
@@ -40,7 +43,9 @@ public class FavoritesFrag extends Fragment implements FavoriteAdapter.OnFavorit
     private Progress progress;
     private FavoriteAdapter adapter;
     private RecyclerView recycler;
+    private SwipeRefreshLayout swipe;
     private LocalMessageLoader messageLoader;
+    private static List<Messages> myFavorites = new ArrayList<>();
 
     public FavoritesFrag() {
         // Required empty public constructor
@@ -75,10 +80,23 @@ public class FavoritesFrag extends Fragment implements FavoriteAdapter.OnFavorit
         popup = new Popup(getContext());
         progress = new Progress(getContext(), false, false);
 
+        swipe = view.findViewById(R.id.swipe);
         recycler = view.findViewById(R.id.recycler);
-        progress.show("Loading messages");
-        messageLoader = new LocalMessageLoader(FavoritesFrag.this);
-        messageLoader.loadFavorites();
+
+        swipe.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                messageLoader = new LocalMessageLoader(FavoritesFrag.this);
+                messageLoader.loadFavorites();
+            }
+        });
+        if (!myFavorites.isEmpty()) {
+            initAdapter();
+        } else {
+            progress.show("Loading favorites messages");
+            messageLoader = new LocalMessageLoader(FavoritesFrag.this);
+            messageLoader.loadFavorites();
+        }
     }
 
     @Override
@@ -104,15 +122,19 @@ public class FavoritesFrag extends Fragment implements FavoriteAdapter.OnFavorit
             return;
         switch (action) {
             case ExtraConfig.MESSAGE_FAVORITE:
-                Messages message = (Messages) object;
-                adapter.removeItem(message);
-                message.setFavorite(false);
-                long id = message.save();
-                if (id < 0) {
-                    popup.show("Oops", "Something went wrong and we couldn't remove your favorite.");
-                } else {
-                    Snackbar.make(recycler, message.getMessageName() + " Added to favorites", Snackbar.LENGTH_SHORT).setAction("Action", null).show();
-                }
+                Messages mMessage = (Messages) object;
+                FavoriteLocalLoader favoriteLocalLoader = new FavoriteLocalLoader(mMessage, new FavoriteLocalLoader.OnFavoriteLocalLoader() {
+                    @Override
+                    public void onFavoriteMessages(boolean isLoaded, String message, List<Messages> messages) {
+                        if (!isLoaded && !TextUtils.isEmpty(message))
+                            popup.show("Oop!", message);
+
+                        if (isLoaded) {
+                            Snackbar.make(recycler, mMessage.getMessageName() + " Removed from favorites", Snackbar.LENGTH_SHORT).setAction("Action", null).show();
+                        }
+                    }
+                });
+                favoriteLocalLoader.removeFavorite();
                 break;
             case ExtraConfig.MESSAGE_INFO:
                 popup.show("INFO", ((Messages) object).details());
@@ -129,35 +151,36 @@ public class FavoritesFrag extends Fragment implements FavoriteAdapter.OnFavorit
         }
     }
 
+    private void initAdapter() {
+        List<Object> mObjects = new ArrayList<>(myFavorites);
+        adapter = new FavoriteAdapter(FavoritesFrag.this, getContext(), mObjects);
+        RecyclerView.LayoutManager mLayoutManager = new LinearLayoutManager(getContext());
+        recycler.setLayoutManager(mLayoutManager);
+        //recycler.setHasFixedSize(true);
+        recycler.setItemAnimator(new DefaultItemAnimator());
+        recycler.setAdapter(adapter);
+    }
+
     @Override
     public void onLocalMessages(boolean isLoaded, String message, List<Messages> messages) {
         if (progress != null)
             progress.clear();
+        if(swipe.isRefreshing())
+            swipe.setRefreshing(false);
 
         if (!isLoaded) {
             popup.show("Oops!", message);
         } else {
             try {
-                if (messages.isEmpty())
+                if (messages.isEmpty()) {
                     popup.show("Info", "There no favorites messages yet.");
+                    return;
+                }
             } catch (NullPointerException e) {
                 e.printStackTrace();
             }
-            List<Object> mMessages = new ArrayList<>();
-            //if(adapter != null && messages.size() > adapter.getItemCount()){
-            //  adapter.refreshAdapter(mLanguages);
-            //adapter.notifyDataSetChanged();
-            //return;
-            //}
-            mMessages.addAll(messages);
-            //Initiate an adapter
-            adapter = new FavoriteAdapter(FavoritesFrag.this, getContext(), mMessages);
-            RecyclerView.LayoutManager mLayoutManager = new LinearLayoutManager(getContext());
-            recycler.setLayoutManager(mLayoutManager);
-            recycler.setHasFixedSize(true);
-            recycler.setItemAnimator(new DefaultItemAnimator());
-            recycler.setAdapter(adapter);
-
+            this.myFavorites = messages;
+            initAdapter();
         }
     }
 

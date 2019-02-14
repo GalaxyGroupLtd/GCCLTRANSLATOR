@@ -27,6 +27,7 @@ import com.carpa.library.utilities.adapter.CloudMessageAdapter;
 import com.carpa.library.utilities.loader.FilterLoader;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -48,7 +49,7 @@ public class LanCloudFrag extends Fragment implements FilterLoader.OnFilterLoade
     private RecyclerView recycler;
     private SwipeRefreshLayout swipe;
     private FilterLoader filterLoader;
-    private List<Messages> mMessages;
+    private static List<Messages> mMessages = new ArrayList<>();
     private CloudMessageAdapter adapter;
 
     public LanCloudFrag() {
@@ -104,7 +105,7 @@ public class LanCloudFrag extends Fragment implements FilterLoader.OnFilterLoade
         if (mMessages.isEmpty()) {
             //Check online
             progress.show("Loading content");
-            filterLoader = new FilterLoader(LanCloudFrag.this, CmdConfig.GET_LANGUAGE_CONTENT.toString(), DeviceIdentity.getCountryCode(getContext()), languages.getLanguageName());
+            filterLoader = new FilterLoader(getContext(), LanCloudFrag.this, CmdConfig.GET_LANGUAGE_CONTENT.toString(), DeviceIdentity.getCountryCode(getContext()), languages.getLanguageName());
             filterLoader.start();
         } else {
             //Init the adapter

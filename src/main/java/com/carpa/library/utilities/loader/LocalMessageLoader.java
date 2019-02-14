@@ -87,7 +87,7 @@ public class LocalMessageLoader {
                     for (Messages message : MessagesFacade.getMessages()) {
                         if (!DirManager.isFileExist(message.getFileName())) {
                             mMessages.add(message);
-                            break;
+                            //break;
                         }
                     }
                     return mMessages;

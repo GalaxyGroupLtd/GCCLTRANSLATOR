@@ -1,9 +1,12 @@
 package com.carpa.library.entities;
 
+import android.content.Context;
 import android.content.res.Configuration;
+import android.support.multidex.MultiDex;
 
 import com.downloader.PRDownloader;
 import com.downloader.PRDownloaderConfig;
+import com.github.johnkil.print.PrintConfig;
 import com.orm.SchemaGenerator;
 import com.orm.SugarApp;
 import com.orm.SugarContext;
@@ -14,6 +17,13 @@ import com.orm.SugarDb;
  */
 
 public class AppDb extends SugarApp {
+
+    @Override
+    protected void attachBaseContext(Context context) {
+        super.attachBaseContext(context);
+        MultiDex.install(this);
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -32,6 +42,9 @@ public class AppDb extends SugarApp {
         PRDownloader.initialize(getApplicationContext(), config);
         // Method to clean up temporary resumed files which is older than the given day
         PRDownloader.cleanUp(90);
+
+        //Font library
+        PrintConfig.initDefault(getAssets(), "fonts/Akzidenz_Grotest_Condenced.ttf");
     }
 
     @Override

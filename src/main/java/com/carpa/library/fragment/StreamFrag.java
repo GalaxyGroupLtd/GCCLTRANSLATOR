@@ -12,6 +12,8 @@ import android.view.ViewGroup;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.widget.RelativeLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -20,12 +22,16 @@ import com.carpa.library.entities.Messages;
 import com.carpa.library.utilities.DirManager;
 import com.carpa.library.utilities.Popup;
 import com.carpa.library.utilities.Progress;
+import com.example.jean.jcplayer.general.JcStatus;
+import com.example.jean.jcplayer.model.JcAudio;
+import com.example.jean.jcplayer.service.JcPlayerManagerListener;
+import com.example.jean.jcplayer.view.JcPlayerView;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import im.delight.android.webview.AdvancedWebView;
-import wseemann.media.FFmpegMediaPlayer;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -35,22 +41,25 @@ import wseemann.media.FFmpegMediaPlayer;
  * Use the {@link StreamFrag#newInstance} factory method to
  * create an instance of this fragment.
  */
-public class StreamFrag extends Fragment implements FFmpegMediaPlayer.OnPreparedListener,
-        FFmpegMediaPlayer.OnErrorListener {
+public class StreamFrag extends Fragment implements JcPlayerManagerListener {
     private static final String ARG_FILES = "files";
     private String mFilesParam;
     private OnStreamFrag mListener;
 
     private List<Messages> mMessages;
-    private FloatingActionButton fab;
     private TextView tittle;
     private AdvancedWebView webview;
     private Messages pdfMessage;
     private Messages audioMessage;
     private boolean isPlaying;
-    private FFmpegMediaPlayer mMediaPlayer = new FFmpegMediaPlayer();
+    private ScrollView playerHolder;
+    //private FFmpegMediaPlayer mMediaPlayer = new FFmpegMediaPlayer();
     private Popup popup;
     private Progress progress;
+
+    //new Player
+    private JcPlayerView jcPlayerView;
+    private JcAudio jcAudio;
 
     public StreamFrag() {
         // Required empty public constructor
@@ -93,11 +102,11 @@ public class StreamFrag extends Fragment implements FFmpegMediaPlayer.OnPrepared
         popup = new Popup(getContext());
         progress = new Progress(getContext(), false, false);
 
+        jcPlayerView = view.findViewById(R.id.jcplayer);
         tittle = view.findViewById(R.id.title);
-        fab = view.findViewById(R.id.playPause);
         webview = view.findViewById(R.id.webview);
+        playerHolder = view.findViewById(R.id.audioPlayer);
 
-        fab.setImageResource(R.drawable.ic_hourglass);
         try {
             mMessages = new Messages().serializeList(mFilesParam);
         } catch (Exception e) {
@@ -133,30 +142,20 @@ public class StreamFrag extends Fragment implements FFmpegMediaPlayer.OnPrepared
             tittle.setText("No booklet found");
         }
 
-        if (audioMessage != null) {
-            fab.setImageResource(R.drawable.ic_pause);
-            playAudio();
-            fab.setOnClickListener(v -> {
-                if (isPlaying && mMediaPlayer.isPlaying()) {
-                    mMediaPlayer.pause();
-                    fab.setImageResource(R.drawable.ic_play);
-                    isPlaying = false;
-                } else if (!isPlaying && !mMediaPlayer.isPlaying()) {
-                    mMediaPlayer.start();
-                    fab.setImageResource(R.drawable.ic_pause);
-                    isPlaying = true;
-                }
-            });
+        if (jcPlayerView.isPlaying()) {
+            jcPlayerView.setPressed(true);
         } else {
-            Toast.makeText(getContext(), "No audio found", Toast.LENGTH_SHORT).show();
+            if (audioMessage != null) {
+                playAudio();
+            } else {
+                Toast.makeText(getContext(), "No audio found", Toast.LENGTH_SHORT).show();
+            }
         }
 
         if (pdfMessage == null && audioMessage == null) {
             popup.show("Notification", "Sorry, there is no content to show.");
             return;
         }
-
-        playPause();
     }
 
     @Override
@@ -179,14 +178,18 @@ public class StreamFrag extends Fragment implements FFmpegMediaPlayer.OnPrepared
     @Override
     public void onDestroy() {
         super.onDestroy();
-        if (mMediaPlayer != null) {
-            mMediaPlayer.release();
+        try {
+            jcPlayerView.kill();
+        }catch (Exception e){
+            e.printStackTrace();
         }
     }
 
     private void displayPDF() {
+        if(audioMessage == null){
+            playerHolder.setVisibility(View.GONE);
+        }
         tittle.setText(pdfMessage.getMessageName());
-
         String googleDocs = "http://docs.google.com/gview?embedded=true&url=";
         //String urlPath = DirServices.BASE_URL + DirServices.GET_FILE + "?path=" + fileModel.getPath();
         WebSettings settings = webview.getSettings();
@@ -208,60 +211,57 @@ public class StreamFrag extends Fragment implements FFmpegMediaPlayer.OnPrepared
     }
 
     private void playAudio() {
-        boolean isError = false;
-        try {
-            //Uri uri = Uri.parse(DirManager.filePath(audioMessage.getFileName()).getAbsolutePath());
-            if (mMediaPlayer != null) {
-                audioMessage.setPath(audioMessage.getPath().replaceAll(" ", "%20"));
-
-                mMediaPlayer.setDataSource(audioMessage.getPath());
-                mMediaPlayer.prepareAsync();//prepareAsync
-                mMediaPlayer.setOnPreparedListener(StreamFrag.this);
-                mMediaPlayer.setOnErrorListener(StreamFrag.this);
-            }
-        } catch (IllegalArgumentException e) {
-            e.printStackTrace();
-            isError = true;
-        } catch (SecurityException e) {
-            e.printStackTrace();
-            isError = true;
-        } catch (IllegalStateException e) {
-            e.printStackTrace();
-            isError = true;
-        } catch (IOException e) {
-            e.printStackTrace();
-            isError = true;
+        if (pdfMessage == null) {
+            RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams)playerHolder.getLayoutParams();
+            layoutParams.height = 360;
+            layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT;
+            playerHolder.setLayoutParams(layoutParams);
+            jcAudio = JcAudio.createFromFilePath(audioMessage.getMessageName(), audioMessage.getPath().replaceAll(" ", "%20"));
+        } else {
+            jcAudio = JcAudio.createFromFilePath("", audioMessage.getPath().replaceAll(" ", "%20"));
         }
-        if (isError && mMediaPlayer == null) {
-            popup.show("Notification", "There was some error while trying to load the audio.");
-        }
+        ArrayList<JcAudio> jcAudios = new ArrayList<>();
+        jcAudios.add(jcAudio);
+        jcPlayerView.initWithTitlePlaylist(jcAudios, jcAudio.getTitle());
+        jcPlayerView.setJcPlayerManagerListener(StreamFrag.this);
+        jcPlayerView.createNotification(R.mipmap.ic_launcher);
     }
 
-    private void playPause() {
-        if (fab != null) {
-            if (mMediaPlayer != null)
-                if (mMediaPlayer.isPlaying())
-                    fab.setImageResource(R.drawable.ic_pause);
-                else
-                    fab.setImageResource(R.drawable.ic_play);
-        }
+    //JcPlayer
+    @Override
+    public void onPreparedAudio(JcStatus jcStatus) {
+
     }
 
     @Override
-    public boolean onError(FFmpegMediaPlayer mp, int what, int extra) {
-        mp.release();
-        isPlaying = false;
-        if (fab != null)
-            fab.setImageResource(R.drawable.ic_play);
-        return false;
+    public void onCompletedAudio() {
+
     }
 
     @Override
-    public void onPrepared(FFmpegMediaPlayer mp) {
-        mp.start();
-        isPlaying = true;
-        if (fab != null)
-            fab.setImageResource(R.drawable.ic_pause);
+    public void onPaused(JcStatus jcStatus) {
+
+    }
+
+    @Override
+    public void onContinueAudio(JcStatus jcStatus) {
+
+    }
+
+    @Override
+    public void onPlaying(JcStatus jcStatus) {
+
+    }
+
+    @Override
+    public void onTimeChanged(JcStatus jcStatus) {
+
+    }
+
+    @Override
+    public void onJcpError(Throwable throwable) {
+        throwable.printStackTrace();
+        popup.show("Oops!", "Something went wrong with the audio preparations.");
     }
 
     /**

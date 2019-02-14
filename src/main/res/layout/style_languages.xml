@@ -15,7 +15,7 @@
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="@color/colorWhite">
+            android:background="@color/colorIron">
 
             <TextView
                 android:id="@+id/mainLogo"
@@ -24,7 +24,7 @@
                 android:layout_alignParentTop="true"
                 android:ellipsize="end"
                 android:gravity="center"
-                android:maxLines="1"
+                android:maxLines="2"
                 android:padding="3dp"
                 android:text="Logo"
                 android:textColor="@color/colorPrimaryDark"

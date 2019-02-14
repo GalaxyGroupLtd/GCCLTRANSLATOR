@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -25,7 +26,34 @@
             android:id="@+id/pdfView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:layout_above="@+id/audioPlayer"
             android:layout_below="@+id/title" />
+
+        <ScrollView
+            android:id="@+id/audioPlayer"
+            android:layout_width="match_parent"
+            android:layout_height="90dp"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentEnd="true"
+            android:background="@color/colorWhite">
+
+            <com.example.jean.jcplayer.view.JcPlayerView
+                android:id="@+id/jcplayer"
+                android:layout_width="match_parent"
+                android:layout_height="120dp"
+                app:next_icon_color="@color/colorPrimaryDark"
+                app:pause_icon_color="@color/colorPrimaryDark"
+                app:play_icon_color="@color/colorPrimaryDark"
+                app:previous_icon_color="@color/colorPrimaryDark"
+                app:progress_color="@color/colorPrimaryDark"
+                app:random_icon_color="@color/colorPrimary"
+                app:repeat_icon_color="@color/colorPrimaryDark"
+                app:seek_bar_color="@color/colorPrimaryDark"
+                app:text_audio_current_duration_color="@color/colorPrimaryDark"
+                app:text_audio_duration_color="@color/colorPrimaryDark"
+                app:text_audio_title_color="@color/colorPrimaryDark" />
+        </ScrollView>
+
 
         <android.support.design.widget.FloatingActionButton
             android:id="@+id/playPause"
@@ -36,6 +64,7 @@
             android:layout_margin="12dp"
             android:background="@color/colorPrimaryDark"
             android:padding="3dp"
-            android:src="@drawable/ic_play" />
+            android:src="@drawable/ic_play"
+            android:visibility="gone" />
     </RelativeLayout>
 </FrameLayout>

@@ -1,5 +1,8 @@
 package com.carpa.library.utilities.loader;
 
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.util.Log;
 
 import com.carpa.library.client.ServiceGen;
@@ -25,8 +28,10 @@ public class FilterLoader {
     private String cmd;
     private String countryCode;
     private String language;
+    private Context context;
 
-    public FilterLoader(OnFilterLoader mListener, String cmd, String countryCode, String language) {
+    public FilterLoader(Context context, OnFilterLoader mListener, String cmd, String countryCode, String language) {
+        this.context = context;
         this.mListener = mListener;
         this.cmd = cmd;
         this.countryCode = countryCode;
@@ -36,6 +41,11 @@ public class FilterLoader {
     public void start() {
         try {
             //Log.d(cmd + "_REQUEST", DataFactory.objectToString(request));
+            if(!haveNetworkConnection()){
+                List<ErrorModel> error = Arrays.asList(new ErrorModel(ErrorCodeConfig.EXTERNAL_API_ERROR[0], ErrorCodeConfig.EXTERNAL_API_ERROR[1], "Not connected.", "Not connected."));
+                responseBody = new ApiResponse(0, DataFactory.errorObject(new ErrorsListModel(error)));
+                throw new Exception("Not connected");
+            }
             Services services = ServiceGen.createService(Services.class, Services.BASE_URL);
             Call<ResponseBody> callService = services.queryService(countryCode, language, cmd);
             callService.enqueue(new Callback<ResponseBody>() {
@@ -57,7 +67,7 @@ public class FilterLoader {
                         try {
                             onPostExecute(new ApiResponse(statusCode, response.errorBody().string()));
                         } catch (IOException e) {
-                            List<ErrorModel> error = Arrays.asList(new ErrorModel(ErrorCodeConfig.EXTERNAL_API_ERROR[0], ErrorCodeConfig.EXTERNAL_API_ERROR[1], e.getMessage(), statusCode + " remote service failed."));
+                            List<ErrorModel> error = Arrays.asList(new ErrorModel(ErrorCodeConfig.EXTERNAL_API_ERROR[0], ErrorCodeConfig.EXTERNAL_API_ERROR[1], "We couldn't process the data for the moment.", statusCode + " remote service failed."));
                             onPostExecute(new ApiResponse(statusCode, DataFactory.errorObject(new ErrorsListModel(error))));
                         }
                     }
@@ -66,7 +76,7 @@ public class FilterLoader {
                 @Override
                 public void onFailure(Call<ResponseBody> call, Throwable e) {
                     e.printStackTrace();
-                    List<ErrorModel> error = Arrays.asList(new ErrorModel(ErrorCodeConfig.EXTERNAL_API_ERROR[0], ErrorCodeConfig.EXTERNAL_API_ERROR[1], e.getMessage(), "Network failure"));
+                    List<ErrorModel> error = Arrays.asList(new ErrorModel(ErrorCodeConfig.EXTERNAL_API_ERROR[0], ErrorCodeConfig.EXTERNAL_API_ERROR[1], "There is a problem with network.", "Network failure"));
                     onPostExecute(new ApiResponse(0, DataFactory.errorObject(new ErrorsListModel(error))));
                 }
             });
@@ -90,13 +100,32 @@ public class FilterLoader {
                         }
                         mListener.onFilterLoader(false, message.toString());
                     } catch (Exception e) {
-                        mListener.onFilterLoader(false, "Failed to clean remote error messages");
+                        mListener.onFilterLoader(false, "There was an error from external resources.");
                     }
+                }else if(response.getReceived() == null){
+                    mListener.onFilterLoader(false, "No content found.");
                 } else {
                     mListener.onFilterLoader(true, response.getReceived());
 
                 }
             }
+    }
+
+    private boolean haveNetworkConnection() throws Exception{
+        boolean haveConnectedWifi = false;
+        boolean haveConnectedMobile = false;
+
+        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo[] netInfo = cm.getAllNetworkInfo();
+        for (NetworkInfo ni : netInfo) {
+            if (ni.getTypeName().equalsIgnoreCase("WIFI"))
+                if (ni.isConnected())
+                    haveConnectedWifi = true;
+            if (ni.getTypeName().equalsIgnoreCase("MOBILE"))
+                if (ni.isConnected())
+                    haveConnectedMobile = true;
+        }
+        return haveConnectedWifi || haveConnectedMobile;
     }
 
     public interface OnFilterLoader {

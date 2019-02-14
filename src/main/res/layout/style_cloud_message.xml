@@ -23,6 +23,7 @@
                 android:layout_alignParentTop="true"
                 android:layout_centerVertical="true"
                 android:layout_marginEnd="3dp"
+                android:visibility="gone"
                 android:src="@drawable/ic_web_book" />
 
 
@@ -49,15 +50,19 @@
                         android:layout_height="wrap_content"
                         android:text="Title"
                         android:textColor="@color/colorPrimaryDark"
-                        android:textSize="12sp"
+                        android:textSize="15sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/caption"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
+                        android:layout_height="match_parent"
+                        android:gravity="bottom"
+                        android:paddingTop="6dp"
+                        android:paddingBottom="6dp"
                         android:text="Caption"
-                        android:textSize="9sp" />
+                        android:textColor="@color/colorBlack"
+                        android:textSize="12sp" />
                 </LinearLayout>
 
                 <ImageView

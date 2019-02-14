@@ -47,7 +47,6 @@ public class LanguagesAdapter extends RecyclerView.Adapter<LanguagesAdapter.MyVi
         holder.title.setText(mContent.display());
         holder.logo.setText(mContent.display().substring(0, 3));
 
-
         holder.logo.setOnClickListener(v -> mListener.onLanguageAdapter(true, holder.logo, mContent));
 
         holder.overFlow.setOnClickListener(v -> popup.show("Details", mContent.details()));

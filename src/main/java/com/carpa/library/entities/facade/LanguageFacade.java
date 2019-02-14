@@ -41,6 +41,17 @@ public class LanguageFacade {
         }
     }
 
+    public static List<Languages> getSetLanguage() throws Exception {
+        try {
+            return Languages.findWithQuery(Languages.class, "SELECT * FROM " + NamingHelper.toSQLName(Languages.class) + " WHERE " +
+                            NamingHelper.toSQLNameDefault("isMain") + " = ?  ORDER BY " + NamingHelper.toSQLNameDefault("id") + " DESC",
+                    "1");
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new Exception("We couldn't find default configurations.");
+        }
+    }
+
     public static Languages findLanguage(String languageName) throws Exception {
         try {
             List<Languages> mMain = Languages.findWithQuery(Languages.class, "SELECT * FROM " + NamingHelper.toSQLName(Languages.class) + " WHERE " +

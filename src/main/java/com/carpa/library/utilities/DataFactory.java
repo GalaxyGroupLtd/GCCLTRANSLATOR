@@ -83,89 +83,22 @@ public class DataFactory {
         }
     }
 
-    public static final String streamToString(InputStream inputStream) throws Exception {
-        try {
-            StringBuilder sb = new StringBuilder();
-            BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
-            String read;
-            while ((read = br.readLine()) != null) {
-                sb.append(read);
-            }
-            br.close();
-            String result = sb.toString();
-            return result;
-        } catch (IOException e) {
-            e.printStackTrace(out);
-            throw new Exception(e.getMessage());
-        }
-    }
-
     public static final String[] splitString(String input, String criteria) {
         String[] outPut = input.split("\\" + criteria);
         return outPut;
     }
 
-    public static final String phoneFormat(String input) throws Exception {
-        try {
-            input = input.trim().replace(" ", "").replace("+", "");
-            if (input.length() < 10) {
-                return "Tel ntago yemewe, invalid tel, tel refuser.";
-            }
-            String firstPart = input.substring(0, 1);
-            if (firstPart.equalsIgnoreCase("07"))
-                input = "25" + input;
-            return input;
-        } catch (Exception e) {
-            e.printStackTrace(out);
-            throw new Exception(e.getMessage());
-        }
-    }
-
-    public static final long printDifference(Date startDate, Date endDate) {
-        long different = endDate.getTime() - startDate.getTime();
-        long elapsedTime = elapsed(startDate, endDate);
-        long secondsInMilli = 1000;
-        long minutesInMilli = secondsInMilli * 60;
-        long hoursInMilli = minutesInMilli * 60;
-        long daysInMilli = hoursInMilli * 24;
-        long elapsedDays = different / daysInMilli;
-        different = different % daysInMilli;
-        long elapsedHours = different / hoursInMilli;
-        different = different % hoursInMilli;
-
-        long elapsedMinutes = different / minutesInMilli;
-        different = different % minutesInMilli;
-        long elapsedSeconds = different / secondsInMilli;
-        return elapsedTime;
-    }
-
-    private static long elapsed(Date startDate, Date endDate) {
-        long diffMills = endDate.getTime() - startDate.getTime();
-        return (diffMills / 1000) / 60;
-    }
-
-    public static long diffMinutes(Date startDate, Date endDate) {
-        try {
-            SimpleDateFormat format = new SimpleDateFormat("yyy-MM-dd HH:mm:ss");
-            startDate = format.parse(format.format(startDate));
-            endDate = format.parse(format.format(endDate));
-            long result = (endDate.getTime() - startDate.getTime()) / (60 * 1000);
-            return result;
-        } catch (ParseException e) {
-            e.printStackTrace(out);
-            return 1;
-        }
-    }
-
     public static String formatDate(Date date) {
         try {
-            SimpleDateFormat sFormat = new SimpleDateFormat("dd-MM-yyy");
+            SimpleDateFormat sFormat = new SimpleDateFormat("yyy-MM-dd");
             return sFormat.format(date);
         } catch (Exception e) {
             e.printStackTrace(out);
             Calendar calendar = Calendar.getInstance();
             if (date != null) {
                 calendar.setTime(date);
+            }else{
+                calendar = Calendar.getInstance();
             }
             StringBuilder stringBuilder = new StringBuilder();
             stringBuilder.append(calendar.get(Calendar.YEAR)).append("-").append(calendar.get(Calendar.MONTH) + 1).append("-").append(calendar.get(Calendar.DAY_OF_MONTH)).append(" ");

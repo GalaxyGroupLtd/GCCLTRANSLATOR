@@ -15,6 +15,7 @@ import android.widget.TextView;
 import com.carpa.library.R;
 import com.carpa.library.config.ExtraConfig;
 import com.carpa.library.entities.Messages;
+import com.carpa.library.utilities.DataFactory;
 import com.carpa.library.utilities.MessageNameFactory;
 
 import java.util.ArrayList;
@@ -46,8 +47,9 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.MyViewHo
     @Override
     public void onBindViewHolder(final MyViewHolder holder, int position) {
         final Messages mContent = (Messages) this.mMessageContent.get(position);
-        holder.title.setText(mContent.display());
-        holder.caption.setText(MessageNameFactory.messageDate(mContent.getMessageName()));
+        holder.title.setText(MessageNameFactory.name(mContent.getFileName()));
+        String messageDate = DataFactory.formatDate(mContent.getMessageDate());
+        holder.caption.setText(messageDate);
 
         holder.icon.setOnClickListener(new View.OnClickListener() {
             @Override

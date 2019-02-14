@@ -1,12 +1,17 @@
 package com.carpa.library.entities;
 
+import com.carpa.library.utilities.DataFactory;
 import com.carpa.library.utilities.MessageNameFactory;
 import com.carpa.library.utilities.UtilModel;
 import com.orm.SugarRecord;
 
-public class Favorites extends SugarRecord implements UtilModel {
+import java.io.Serializable;
+import java.util.Date;
+
+public class Favorites extends SugarRecord implements UtilModel, Serializable {
     private String messageName;
     private String fileName;
+    private Date messageDate;
     private String extension;
     private String path;
     private String fileSize;
@@ -15,9 +20,10 @@ public class Favorites extends SugarRecord implements UtilModel {
     public Favorites() {
     }
 
-    public Favorites(String messageName, String fileName, String extension, String path, String fileSize, String lastModified) {
+    public Favorites(String messageName, String fileName, Date messageDate, String extension, String path, String fileSize, String lastModified) {
         this.messageName = messageName;
         this.fileName = fileName;
+        this.messageDate = messageDate;
         this.extension = extension;
         this.path = path;
         this.fileSize = fileSize;
@@ -72,11 +78,20 @@ public class Favorites extends SugarRecord implements UtilModel {
         this.lastModified = lastModified;
     }
 
+    public Date getMessageDate() {
+        return messageDate;
+    }
+
+    public void setMessageDate(Date messageDate) {
+        this.messageDate = messageDate;
+    }
+
     @Override
     public String toString() {
-        return "FavoritesFrag{" +
+        return "Favorites{" +
                 "messageName='" + messageName + '\'' +
                 ", fileName='" + fileName + '\'' +
+                ", messageDate=" + DataFactory.formatDate(messageDate) +
                 ", extension='" + extension + '\'' +
                 ", path='" + path + '\'' +
                 ", fileSize='" + fileSize + '\'' +

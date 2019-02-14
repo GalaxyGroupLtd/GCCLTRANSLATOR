@@ -79,6 +79,7 @@ public class RectifierService extends IntentService implements LocalMessageLoade
 
     private void sendBroadcastProfileModel() {
         try {
+
             Intent intent = new Intent(BroadcastConfig.NEW_MESSAGE[0]);
             LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
         } catch (Exception e) {

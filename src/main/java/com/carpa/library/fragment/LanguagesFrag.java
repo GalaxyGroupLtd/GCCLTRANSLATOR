@@ -24,6 +24,7 @@ import com.carpa.library.utilities.loader.FilterLoader;
 import com.carpa.library.utilities.loader.LocalLanguagesLoader;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -42,7 +43,7 @@ public class LanguagesFrag extends Fragment implements LocalLanguagesLoader.OnLo
     private Progress progress;
     private RecyclerView recycler;
     private SwipeRefreshLayout swipe;
-    private List<Languages> mLanguages;
+    private static List<Languages> mLanguages = new ArrayList<>();
     private LocalLanguagesLoader languagesLoader;
     private LanguagesAdapter adapter;
     private FilterLoader filterLoader;
@@ -86,22 +87,26 @@ public class LanguagesFrag extends Fragment implements LocalLanguagesLoader.OnLo
         swipe.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
-                filterLoader = new FilterLoader(LanguagesFrag.this, CmdConfig.GET_SUPPORTED_LANGUAGES.toString(), DeviceIdentity.getCountryCode(getContext()), "none");
+                filterLoader = new FilterLoader(getContext(), LanguagesFrag.this, CmdConfig.GET_SUPPORTED_LANGUAGES.toString(), DeviceIdentity.getCountryCode(getContext()), "none");
                 filterLoader.start();
             }
         });
-
-        progress.show("Loading languages");
-        //check local database to see if there is supported languages
-        if (Languages.count(Languages.class) <= 1) {
-            //Request online language
-            filterLoader = new FilterLoader(LanguagesFrag.this, CmdConfig.GET_SUPPORTED_LANGUAGES.toString(), DeviceIdentity.getCountryCode(getContext()), "none");
-            filterLoader.start();
+        if (!mLanguages.isEmpty()) {
+            initAdapter();
         } else {
-            //Request local languages
-            languagesLoader = new LocalLanguagesLoader(LanguagesFrag.this);
-            languagesLoader.load();
+            progress.show("Loading languages");
+            //check local database to see if there is supported languages
+            if (Languages.count(Languages.class) <= 1) {
+                //Request online language
+                filterLoader = new FilterLoader(getContext(), LanguagesFrag.this, CmdConfig.GET_SUPPORTED_LANGUAGES.toString(), DeviceIdentity.getCountryCode(getContext()), "none");
+                filterLoader.start();
+            } else {
+                //Request local languages
+                languagesLoader = new LocalLanguagesLoader(LanguagesFrag.this);
+                languagesLoader.load();
+            }
         }
+
     }
 
     @Override
@@ -125,6 +130,8 @@ public class LanguagesFrag extends Fragment implements LocalLanguagesLoader.OnLo
     public void onLocalLanguages(boolean isLoaded, String message, List<Languages> languages) {
         if (progress != null)
             progress.clear();
+        if (swipe.isRefreshing())
+            swipe.setRefreshing(false);
 
         if (!isLoaded) {
             popup.show("Oops!", message);
@@ -144,7 +151,7 @@ public class LanguagesFrag extends Fragment implements LocalLanguagesLoader.OnLo
         adapter = new LanguagesAdapter(LanguagesFrag.this, getContext(), mLanguages);
         RecyclerView.LayoutManager mLayoutManager = new GridLayoutManager(getContext(), 2);//new LinearLayoutManager(getContext());//new GridLayoutManager(getContext(), 2);
         recycler.setLayoutManager(mLayoutManager);
-        recycler.setHasFixedSize(true);
+        //recycler.setHasFixedSize(true);
         recycler.setItemAnimator(new DefaultItemAnimator());
         recycler.setAdapter(adapter);
     }

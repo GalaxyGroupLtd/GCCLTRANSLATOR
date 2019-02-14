@@ -1,9 +1,6 @@
 package com.carpa.library.activities;
 
 import android.Manifest;
-import android.app.AlarmManager;
-import android.app.PendingIntent;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -11,17 +8,14 @@ import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 
 import com.carpa.library.R;
 import com.carpa.library.config.CmdConfig;
 import com.carpa.library.config.ExtraConfig;
 import com.carpa.library.entities.facade.LanguageFacade;
 import com.carpa.library.fragment.LanSetting;
-import com.carpa.library.services.CloudService;
 import com.carpa.library.utilities.DeviceIdentity;
 import com.carpa.library.utilities.DirManager;
-import com.carpa.library.utilities.DownloadTaskListener;
 import com.carpa.library.utilities.Popup;
 import com.carpa.library.utilities.Progress;
 import com.carpa.library.utilities.loader.FilterLoader;
@@ -32,7 +26,6 @@ import com.karumi.dexter.listener.PermissionDeniedResponse;
 import com.karumi.dexter.listener.PermissionRequest;
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener;
 
-import java.util.Calendar;
 import java.util.List;
 
 public class Home extends AppCompatActivity implements Popup.OnPopAction, FilterLoader.OnFilterLoader, LanSetting.OnLanSettings {
@@ -41,10 +34,6 @@ public class Home extends AppCompatActivity implements Popup.OnPopAction, Filter
     private Progress progress;
     private FilterLoader filterLoader;
     private String[] popupActions = {"OK", "Cancel"};
-
-    private Intent alarmIntent;
-    private PendingIntent pendingIntent;
-    private AlarmManager alarm;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,7 +64,7 @@ public class Home extends AppCompatActivity implements Popup.OnPopAction, Filter
                 if (!LanguageFacade.isLanguageSet()) {
                     //Load all supported languages
                     progress.show("Loading...");
-                    filterLoader = new FilterLoader(Home.this, CmdConfig.GET_SUPPORTED_LANGUAGES.toString(), DeviceIdentity.getCountryCode(Home.this), "None");
+                    filterLoader = new FilterLoader(Home.this, Home.this, CmdConfig.GET_SUPPORTED_LANGUAGES.toString(), DeviceIdentity.getCountryCode(Home.this), "None");
                     filterLoader.start();
                 } else {
                     //start library activity
@@ -184,7 +173,7 @@ public class Home extends AppCompatActivity implements Popup.OnPopAction, Filter
         if (progress != null)
             progress.clear();
         if (!isLoaded)
-            popup.show("Notification", response.toString());
+            popup.show("Oops!", response.toString());
         else {
             //Show a fragment with a list to choose the default language
             try {
@@ -205,26 +194,7 @@ public class Home extends AppCompatActivity implements Popup.OnPopAction, Filter
         }
     }
 
-    public void scheduleAlarm() {
-        DownloadTaskListener.setSchedule(true);
-        Log.d("SCHEDULE", "Scheduling download task");
-        Calendar cal = Calendar.getInstance();
-        alarmIntent = new Intent(Home.this, CloudService.class);
-        alarmIntent.setAction(CloudService.ACTION_SYNC);
-        pendingIntent = PendingIntent.getService(Home.this,
-                999,
-                alarmIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT);
-        alarm = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-        alarm.setInexactRepeating(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), CloudService.PERIOD, pendingIntent);
-    }
-
     private void startLibrary() {
-        //schedule activity
-        if (!DownloadTaskListener.isScheduled()) {
-            Log.d("SCHEDULE", "Missed Boot, reinitialise download tasks");
-            scheduleAlarm();
-        }
         //start library activity
         Intent intent = new Intent(Home.this, LibraryHome.class);
         startActivity(intent);

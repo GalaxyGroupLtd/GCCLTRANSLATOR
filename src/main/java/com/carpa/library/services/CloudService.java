@@ -11,9 +11,11 @@ import com.carpa.library.entities.Languages;
 import com.carpa.library.entities.Messages;
 import com.carpa.library.entities.facade.LanguageFacade;
 import com.carpa.library.entities.facade.MessagesFacade;
+import com.carpa.library.utilities.DataFactory;
 import com.carpa.library.utilities.DeviceIdentity;
 import com.carpa.library.utilities.DirManager;
 import com.carpa.library.utilities.DownloadUtil;
+import com.carpa.library.utilities.MessageCache;
 import com.carpa.library.utilities.MessageNameFactory;
 import com.carpa.library.utilities.loader.FilterLoader;
 import com.carpa.library.utilities.loader.LocalMessageLoader;
@@ -31,9 +33,9 @@ import java.util.List;
 public class CloudService extends IntentService implements LocalMessageLoader.OnLocalMessagesLoader, FilterLoader.OnFilterLoader {
     public static final String ACTION_SYNC = "com.carpa.library.services.action.SYNC";
     public static final String EXTRA_SYNCYPARAM = "com.carpa.library.services.extra.SYNC_PARAM";
-    public static final long PERIOD = 1000 * 60 * 30; //30 MIN
+    public static final long PERIOD = 1000 * 60 * 1; //1, 15 MIN
 
-    private Languages defaultLanguage;
+    private List<Languages> languagesList;
     private List<Messages> messages;
     private List<Messages> messagesToBeDownloaded = new ArrayList<>();
     private LocalMessageLoader messageLoader;
@@ -74,12 +76,12 @@ public class CloudService extends IntentService implements LocalMessageLoader.On
     private void handleActionSync(String syncParam) {
         //Get default language and Get all local files
         try {
-            defaultLanguage = LanguageFacade.getDefaultLanguage();
+            languagesList = LanguageFacade.getSetLanguage();
         } catch (Exception e) {
             Log.d("DEFAULT_LAN", "Failed to get default languages");
             e.printStackTrace();
         }
-        if (defaultLanguage == null)
+        if (languagesList == null)
             return;
 
         //Request language content from web core
@@ -90,13 +92,10 @@ public class CloudService extends IntentService implements LocalMessageLoader.On
     public void onLocalMessages(boolean isLoaded, String error, List<Messages> messages) {
         if (isLoaded && !messages.isEmpty()) {
             for (Messages message : messages) {
-                if (messagesToBeDownloaded.contains(message))
-                    continue;
-
                 if (!DirManager.isFileExist(message.getFileName())) {
                     messagesToBeDownloaded.add(message);
                     //(Un)Comment for multiple file download or single file download
-                    break;
+                    //break;
                 }
             }
             //Start download
@@ -105,14 +104,17 @@ public class CloudService extends IntentService implements LocalMessageLoader.On
     }
 
     private void loadMessages() {
-        filterLoader = new FilterLoader(CloudService.this, CmdConfig.GET_LANGUAGE_CONTENT.toString(), DeviceIdentity.getCountryCode(CloudService.this), defaultLanguage.getLanguageName());
-        filterLoader.start();
+        for (Languages languages : languagesList) {
+            filterLoader = new FilterLoader(CloudService.this, CloudService.this, CmdConfig.GET_LANGUAGE_CONTENT.toString(), DeviceIdentity.getCountryCode(CloudService.this), languages.getLanguageName());
+            filterLoader.start();
+        }
     }
 
     private void startDownload() {
         for (Messages message : messagesToBeDownloaded) {
             new RequestDownload().execute(message);
         }
+
     }
 
     @Override
@@ -122,14 +124,21 @@ public class CloudService extends IntentService implements LocalMessageLoader.On
             return;
         }
         try {
+            if(response == null || response.toString() == null){
+                Log.d("RESP", "There is no cloud message found for this language");
+                return;
+            }
             List<Messages> mMessages = new Messages().serializeList(response.toString());
             for (Messages message : mMessages) {
                 message.setMessageName(MessageNameFactory.name(message.getFileName()));
+                message.setMessageDate(DataFactory.formatStringDate(MessageNameFactory.messageDate(message.getFileName())));
                 Messages localMessage = MessagesFacade.getFileName(message.getFileName());
-                if (localMessage == null)
+                if (localMessage == null) {
                     message.save();
+                }
             }
-
+            if (!MessageCache.isAdding)
+                MessageCache.addAll(mMessages);
             //continue with getting all the files in the DB
             messageLoader = new LocalMessageLoader(CloudService.this);
             messageLoader.loadUnavailable();
@@ -146,6 +155,14 @@ public class CloudService extends IntentService implements LocalMessageLoader.On
             Messages message = param[0];
             int downloadId = 0;
             try {
+                if (DirManager.isFileExist(message.getFileName())) {
+                    Messages checkMessage = MessagesFacade.getFileName(message.getFileName());
+                    if (checkMessage == null) {
+                        message.setMessageName(MessageNameFactory.name(message.getFileName()));
+                        message.save();
+                    }
+                    return 0;
+                }
                 Log.d("DOWNLOAD", "Downloading: " + message.getPath() + " | " + DirManager.getRoot() + " | " + message.getFileName());
                 //String url, String directory, String fileName, OnDownloadUtil mListener
                 downloadId = new DownloadUtil(message.getPath(), DirManager.getRoot(), message.getFileName(), new DownloadUtil.OnDownloadUtil() {

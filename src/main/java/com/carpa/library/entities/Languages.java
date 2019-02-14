@@ -1,23 +1,30 @@
 package com.carpa.library.entities;
 
+import android.annotation.SuppressLint;
+
 import com.carpa.library.utilities.DataFactory;
 import com.carpa.library.utilities.UtilAbstractModelORM;
 import com.carpa.library.utilities.UtilModel;
 
-public class Languages extends UtilAbstractModelORM<Languages> implements UtilModel {
+import java.io.Serializable;
+import java.util.Objects;
+
+public class Languages extends UtilAbstractModelORM<Languages> implements UtilModel, Serializable {
     boolean isMain;
     private String languageName;
     private String languageUrl;
+    private String languageCode;
 
     public Languages() {
         super(Languages.class);
     }
 
-    public Languages(String languageName, String languageUrl, boolean isMain) {
+    public Languages(String languageName, String languageUrl, boolean isMain, String languageCode) {
         super(Languages.class);
         this.languageName = languageName;
         this.languageUrl = languageUrl;
         this.isMain = isMain;
+        this.languageCode = languageCode;
     }
 
     public String getLanguageName() {
@@ -44,6 +51,44 @@ public class Languages extends UtilAbstractModelORM<Languages> implements UtilMo
         isMain = main;
     }
 
+    public String getLanguageCode() {
+        return languageCode;
+    }
+
+    public void setLanguageCode(String languageCode) {
+        this.languageCode = languageCode;
+    }
+
+    @SuppressLint("NewApi")
+    @Override
+    public int hashCode() {
+        int hash = 3;
+        hash = 29 * hash + Objects.hashCode(this.languageName);
+        hash = 29 * hash + Objects.hashCode(this.languageUrl);
+        return hash;
+    }
+
+    @SuppressLint("NewApi")
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final Languages other = (Languages) obj;
+        if (!Objects.equals(this.languageName, other.languageName)) {
+            return false;
+        }
+        if (!Objects.equals(this.languageUrl, other.languageUrl)) {
+            return false;
+        }
+        return true;
+    }
     @Override
     public String toString() {
         return "Languages{" +

@@ -20,6 +20,7 @@ import com.carpa.library.R;
 import com.carpa.library.config.ExtraConfig;
 import com.carpa.library.entities.Messages;
 import com.carpa.library.entities.facade.MessagesFacade;
+import com.carpa.library.utilities.DataFactory;
 import com.carpa.library.utilities.DirManager;
 import com.carpa.library.utilities.DownloadUtil;
 import com.carpa.library.utilities.MessageNameFactory;
@@ -60,7 +61,8 @@ public class CloudMessageAdapter extends RecyclerView.Adapter<CloudMessageAdapte
         final Messages mContent = this.mMessageContent.get(position);
         holder.downloadHolder.setVisibility(View.GONE);
         holder.title.setText(mContent.display());
-        holder.caption.setText(MessageNameFactory.messageDate(mContent.getMessageName()));
+        String messageDate = DataFactory.formatDate(mContent.getMessageDate());
+        holder.caption.setText(messageDate);
 
         if (mContent.getExtension().equalsIgnoreCase("mp3")) {
             holder.type.setImageResource(R.drawable.ic_audiotrack);

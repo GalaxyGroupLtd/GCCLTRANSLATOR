@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -41,6 +42,8 @@ public class NewFrag extends Fragment implements MessageAdapter.OnMessageAdapter
     private MessageAdapter adapter;
     private LocalMessageLoader messageLoader;
     private RecyclerView recycler;
+    private SwipeRefreshLayout swipe;
+    private static List<Messages> mMessages = new ArrayList<>();
 
     public NewFrag() {
         // Required empty public constructor
@@ -74,11 +77,24 @@ public class NewFrag extends Fragment implements MessageAdapter.OnMessageAdapter
         super.onViewCreated(view, savedInstanceState);
         popup = new Popup(getContext());
         progress = new Progress(getContext(), false, false);
-
         recycler = view.findViewById(R.id.recycler);
-        progress.show("Loading messages");
-        messageLoader = new LocalMessageLoader(NewFrag.this);
-        messageLoader.loadNew();
+        swipe = view.findViewById(R.id.swipe);
+
+        swipe.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                messageLoader = new LocalMessageLoader(NewFrag.this);
+                messageLoader.loadNew();
+            }
+        });
+
+        if (!mMessages.isEmpty()) {
+            initAdapter();
+        } else {
+            progress.show("Loading new messages");
+            messageLoader = new LocalMessageLoader(NewFrag.this);
+            messageLoader.loadNew();
+        }
     }
 
     @Override
@@ -102,6 +118,7 @@ public class NewFrag extends Fragment implements MessageAdapter.OnMessageAdapter
     public void onMessageAdapter(boolean isClicked, View view, Object object, String action) {
         if (action == null)
             return;
+        mListener.onNewDecrement(1);
         Messages message = (Messages) object;
         message.setNew(false);
         adapter.removeItem(message);
@@ -140,6 +157,9 @@ public class NewFrag extends Fragment implements MessageAdapter.OnMessageAdapter
         if (progress != null)
             progress.clear();
 
+        if(swipe.isRefreshing())
+            swipe.setRefreshing(false);
+
         if (!isLoaded) {
             popup.show("Oops!", message);
         } else {
@@ -149,22 +169,25 @@ public class NewFrag extends Fragment implements MessageAdapter.OnMessageAdapter
             } catch (NullPointerException e) {
                 e.printStackTrace();
             }
-
-            List<Object> mMessages = new ArrayList<>();
             //if(adapter != null && messages.size() > adapter.getItemCount()){
             //  adapter.refreshAdapter(mLanguages);
             //adapter.notifyDataSetChanged();
             //return;
             //}
-            mMessages.addAll(messages);
+            mMessages = messages;
             //Initiate an adapter
-            adapter = new MessageAdapter(NewFrag.this, getContext(), mMessages);
-            RecyclerView.LayoutManager mLayoutManager = new LinearLayoutManager(getContext());
-            recycler.setLayoutManager(mLayoutManager);
-            recycler.setHasFixedSize(true);
-            recycler.setItemAnimator(new DefaultItemAnimator());
-            recycler.setAdapter(adapter);
+            initAdapter();
         }
+    }
+
+    private void initAdapter() {
+        List<Object> mObjects = new ArrayList<>(mMessages);
+        adapter = new MessageAdapter(NewFrag.this, getContext(), mObjects);
+        RecyclerView.LayoutManager mLayoutManager = new LinearLayoutManager(getContext());
+        recycler.setLayoutManager(mLayoutManager);
+        //recycler.setHasFixedSize(true);
+        recycler.setItemAnimator(new DefaultItemAnimator());
+        recycler.setAdapter(adapter);
     }
 
     public void filter(String charSequence) {
@@ -185,5 +208,7 @@ public class NewFrag extends Fragment implements MessageAdapter.OnMessageAdapter
      */
     public interface OnNewFrag {
         void onNavigation(Fragment source, Fragment destination, Object extra);
+
+        void onNewDecrement(int decrement);
     }
 }

@@ -100,7 +100,7 @@ public class LanSetting extends Fragment implements Popup.OnPopAction, MainAdapt
             adapter = new MainAdapter(LanSetting.this, getContext(), objects);
             RecyclerView.LayoutManager mLayoutManager = new LinearLayoutManager(getContext());
             recycler.setLayoutManager(mLayoutManager);
-            recycler.setHasFixedSize(true);
+            //recycler.setHasFixedSize(true);
             recycler.setItemAnimator(new DefaultItemAnimator());
             recycler.setAdapter(adapter);
 

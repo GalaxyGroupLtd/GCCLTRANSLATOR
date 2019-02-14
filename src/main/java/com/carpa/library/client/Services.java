@@ -11,7 +11,7 @@ import retrofit2.http.Query;
  */
 
 public interface Services {
-    String BASE_URL = "http://52.15.230.239:8080/";
+    String BASE_URL = "http://android.afrisatt.info:8080/";
     String PATH = "GCCLIB/library/process/lib";
 
     @GET(PATH)

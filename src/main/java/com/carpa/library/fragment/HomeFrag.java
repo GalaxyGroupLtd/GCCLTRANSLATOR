@@ -11,6 +11,7 @@ import android.support.v4.app.Fragment;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -22,12 +23,15 @@ import com.carpa.library.entities.Messages;
 import com.carpa.library.services.RectifierService;
 import com.carpa.library.utilities.DataFactory;
 import com.carpa.library.utilities.DownloadTaskListener;
+import com.carpa.library.utilities.MessageCache;
 import com.carpa.library.utilities.Popup;
 import com.carpa.library.utilities.Progress;
 import com.carpa.library.utilities.adapter.MessageAdapter;
+import com.carpa.library.utilities.loader.FavoriteLocalLoader;
 import com.carpa.library.utilities.loader.LocalMessageLoader;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -41,6 +45,12 @@ import java.util.List;
  * create an instance of this fragment.
  */
 public class HomeFrag extends Fragment implements MessageAdapter.OnMessageAdapter, LocalMessageLoader.OnLocalMessagesLoader {
+    private static String LAN_PARAM = "LAN_PARAM";
+    private static String YEAR_PARAM = "YEAR_PARAM";
+    private static String MONTH_PARAM = "MONTH_PARAM";
+    private static String MESSAGE_PARAM = "MESSAGE_PARAM";
+    private String lanCode, year, month;
+
     private OnHomeFrag mListener;
 
     private Popup popup;
@@ -53,6 +63,9 @@ public class HomeFrag extends Fragment implements MessageAdapter.OnMessageAdapte
 
     private RecyclerView recycler;
 
+    //new way
+    private List<Messages> mMessages;
+
     public HomeFrag() {
         // Required empty public constructor
     }
@@ -63,9 +76,13 @@ public class HomeFrag extends Fragment implements MessageAdapter.OnMessageAdapte
      *
      * @return A new instance of fragment HomeFrag.
      */
-    public static HomeFrag newInstance() {
+    public static HomeFrag newInstance(String lanCode, String year, String month, List<Messages> data) {
         HomeFrag fragment = new HomeFrag();
         Bundle args = new Bundle();
+        args.putSerializable(MESSAGE_PARAM, (Serializable) data);
+        args.putString(MONTH_PARAM, month);
+        args.putString(YEAR_PARAM, year);
+        args.putString(LAN_PARAM, lanCode);
         fragment.setArguments(args);
         return fragment;
     }
@@ -73,6 +90,12 @@ public class HomeFrag extends Fragment implements MessageAdapter.OnMessageAdapte
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (getArguments() != null) {
+            lanCode = getArguments().getString(LAN_PARAM);
+            year = getArguments().getString(YEAR_PARAM);
+            month = getArguments().getString(MONTH_PARAM);
+            mMessages = (List<Messages>) getArguments().getSerializable(MESSAGE_PARAM);
+        }
     }
 
     @Override
@@ -89,11 +112,26 @@ public class HomeFrag extends Fragment implements MessageAdapter.OnMessageAdapte
         progress = new Progress(getContext(), false, false);
 
         recycler = view.findViewById(R.id.recycler);
-        progress.show("Loading messages");
-        messageLoader = new LocalMessageLoader(HomeFrag.this);
-        messageLoader.load();
+        initAdapter();
+        /*
+        if (MessageCache.getGroupedMessages().size() >= 1) {
+            initAdapter();
+        } else {
+            progress.show("Loading messages");
+            messageLoader = new LocalMessageLoader(HomeFrag.this);
+            messageLoader.load();
+        }*/
     }
 
+    private void initAdapter() {
+        List<Object> mObjects = new ArrayList<>(mMessages);
+        adapter = new MessageAdapter(HomeFrag.this, getContext(), mObjects);
+        RecyclerView.LayoutManager mLayoutManager = new LinearLayoutManager(getContext());
+        recycler.setLayoutManager(mLayoutManager);
+        recycler.setHasFixedSize(true);
+        recycler.setItemAnimator(new DefaultItemAnimator());
+        recycler.setAdapter(adapter);
+    }
 
     @Override
     public void onAttach(Context context) {
@@ -130,14 +168,19 @@ public class HomeFrag extends Fragment implements MessageAdapter.OnMessageAdapte
             return;
         switch (action) {
             case ExtraConfig.MESSAGE_FAVORITE:
-                Messages message = (Messages) object;
-                message.setFavorite(true);
-                long id = message.save();
-                if (id < 0) {
-                    popup.show("Oops", "Something went wrong and we couldn't save your favorite.");
-                } else {
-                    Snackbar.make(recycler, message.getMessageName() + " Added to favorites", Snackbar.LENGTH_SHORT).setAction("Action", null).show();
-                }
+                Messages mMessage = (Messages) object;
+                FavoriteLocalLoader favoriteLocalLoader = new FavoriteLocalLoader(mMessage, new FavoriteLocalLoader.OnFavoriteLocalLoader() {
+                    @Override
+                    public void onFavoriteMessages(boolean isLoaded, String message, List<Messages> messages) {
+                        if (!isLoaded && !TextUtils.isEmpty(message))
+                            popup.show("Oop!", message);
+
+                        if (isLoaded) {
+                            Snackbar.make(recycler, mMessage.getMessageName() + " Added to favorites", Snackbar.LENGTH_SHORT).setAction("Action", null).show();
+                        }
+                    }
+                });
+                favoriteLocalLoader.addFavorite();
                 break;
             case ExtraConfig.MESSAGE_INFO:
                 popup.show("INFO", ((Messages) object).details());
@@ -163,36 +206,33 @@ public class HomeFrag extends Fragment implements MessageAdapter.OnMessageAdapte
             popup.show("Oops!", message);
         } else {
             try {
-                if (messages.isEmpty())
+                if (messages == null || messages.isEmpty())
                     popup.show("Info", "There no messages yet. Let the device connected to the internet for as long you can, If no message come you may contact the language translator admin!");
             } catch (NullPointerException e) {
                 e.printStackTrace();
             }
-            List<Object> mMessages = new ArrayList<>();
             //if(adapter != null && messages.size() > adapter.getItemCount()){
             //  adapter.refreshAdapter(mLanguages);
             //adapter.notifyDataSetChanged();
             //return;
             //}
-            if (adapter != null && messages.size() > adapter.getItemCount()) {
+            if (adapter != null && (messages != null ? messages.size() : 0) > adapter.getItemCount()) {
                 mListener.onNewMessage();
             }
-            mMessages.addAll(messages);
-            //Initiate an adapter
-            adapter = new MessageAdapter(HomeFrag.this, getContext(), mMessages);
-            RecyclerView.LayoutManager mLayoutManager = new LinearLayoutManager(getContext());
-            recycler.setLayoutManager(mLayoutManager);
-            recycler.setHasFixedSize(true);
-            recycler.setItemAnimator(new DefaultItemAnimator());
-            recycler.setAdapter(adapter);
+            if (messages != null && messages.size() > 0) {
+                if (!MessageCache.isAdding)
+                    MessageCache.addAll(messages);
+                //Initiate an adapter
+                initAdapter();
+            }
         }
     }
 
     public void onNewMessage() {
+        //Todo: Check the new message
         //update home ui on new Message downloaded
-        messageLoader = new LocalMessageLoader(HomeFrag.this);
-        messageLoader.load();
-
+        //messageLoader = new LocalMessageLoader(HomeFrag.this);
+        //messageLoader.load();
     }
 
     public void filter(String charSequence) {

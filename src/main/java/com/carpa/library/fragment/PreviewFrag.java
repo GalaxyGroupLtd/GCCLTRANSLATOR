@@ -4,12 +4,13 @@ import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.RelativeLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -18,19 +19,24 @@ import com.carpa.library.entities.Messages;
 import com.carpa.library.entities.facade.MessagesFacade;
 import com.carpa.library.utilities.DataFactory;
 import com.carpa.library.utilities.DirManager;
+import com.carpa.library.utilities.MessageCache;
 import com.carpa.library.utilities.Popup;
 import com.carpa.library.utilities.Progress;
+import com.example.jean.jcplayer.general.JcStatus;
+import com.example.jean.jcplayer.model.JcAudio;
+import com.example.jean.jcplayer.service.JcPlayerManagerListener;
+import com.example.jean.jcplayer.view.JcPlayerView;
 import com.github.barteksc.pdfviewer.PDFView;
 import com.github.barteksc.pdfviewer.listener.OnLoadCompleteListener;
 import com.github.barteksc.pdfviewer.listener.OnPageChangeListener;
+import com.github.barteksc.pdfviewer.listener.OnPageScrollListener;
 import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle;
 import com.shockwave.pdfium.PdfDocument;
 
 import java.io.File;
-import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
-import wseemann.media.FFmpegMediaPlayer;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -42,8 +48,8 @@ import wseemann.media.FFmpegMediaPlayer;
  */
 public class PreviewFrag extends Fragment implements OnPageChangeListener,
         OnLoadCompleteListener,
-        FFmpegMediaPlayer.OnPreparedListener,
-        FFmpegMediaPlayer.OnErrorListener {
+        OnPageScrollListener,
+        JcPlayerManagerListener {
     private static final String MESSAGE_PARAM = "MESSAGE_PARAM";
     private static final String TAG = PreviewFrag.class.getSimpleName();
     private static int pdfPage;
@@ -54,17 +60,25 @@ public class PreviewFrag extends Fragment implements OnPageChangeListener,
 
     private Popup popup;
     private Progress progress;
-    private FloatingActionButton fab;
     private TextView tittle;
+    private ScrollView playerHolder;
     private PDFView pdfView;
     private Integer pageNumber = 0;
+    private long currentPosition = 0;
+    private long duration = 0;
+    private JcStatus.PlayState playState = JcStatus.PlayState.PREPARING;
+    private boolean isResuming = false;
+    private JcAudio jcAudio;
     private String pdfFileName;
     private Messages message;
     private Messages pdfMessage;
     private Messages audioMessage;
     private List<Messages> mMessages;
     private boolean isPlaying;
-    private FFmpegMediaPlayer mMediaPlayer = new FFmpegMediaPlayer();
+    //private FFmpegMediaPlayer mMediaPlayer = new FFmpegMediaPlayer();
+
+    //new Player
+    private JcPlayerView jcPlayerView;
 
     public PreviewFrag() {
         // Required empty public constructor
@@ -106,15 +120,23 @@ public class PreviewFrag extends Fragment implements OnPageChangeListener,
         super.onViewCreated(view, savedInstanceState);
         if (savedInstanceState != null) {
             pageNumber = savedInstanceState.getInt("page");
+            currentPosition = savedInstanceState.getLong("position");
+            duration = savedInstanceState.getLong("duration");
+            isResuming = savedInstanceState.getBoolean("resume");
+            try {
+                playState = JcStatus.PlayState.valueOf(savedInstanceState.getString("playState"));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
         popup = new Popup(getContext());
         progress = new Progress(getContext(), false, false);
 
+        jcPlayerView = view.findViewById(R.id.jcplayer);
         tittle = view.findViewById(R.id.title);
-        fab = view.findViewById(R.id.playPause);
         pdfView = view.findViewById(R.id.pdfView);
+        playerHolder = view.findViewById(R.id.audioPlayer);
 
-        fab.setImageResource(R.drawable.ic_hourglass);
         try {
             message = (Messages) DataFactory.stringToObject(Messages.class, messageData);
         } catch (Exception e) {
@@ -124,7 +146,10 @@ public class PreviewFrag extends Fragment implements OnPageChangeListener,
         }
 
         try {
-            mMessages = MessagesFacade.getMessagePerName(message.getMessageName());
+            if (MessageCache.getMessageName(message.getMessageName()).size() < 0)
+                mMessages = MessagesFacade.getMessagePerName(message.getMessageName());
+            else
+                mMessages = MessageCache.getMessageName(message.getMessageName());
         } catch (Exception e) {
             e.printStackTrace();
             popup.show("Oops!", "Sorry, we couldn't solve internal message content.");
@@ -136,15 +161,7 @@ public class PreviewFrag extends Fragment implements OnPageChangeListener,
                 if (content.getFileName().endsWith(".pdf")) {
                     pdfMessage = content;
                     //aac, acc+, avi, flac, mp2, mp3, mp4, ogg, 3gp
-                } else if (content.getFileName().endsWith(".mp3") ||
-                        content.getFileName().endsWith(".aac") ||
-                        content.getFileName().endsWith(".aac+") ||
-                        content.getFileName().endsWith(".avi") ||
-                        content.getFileName().endsWith(".flac") ||
-                        content.getFileName().endsWith(".mp2") ||
-                        content.getFileName().endsWith(".mp4") ||
-                        content.getFileName().endsWith(".ogg") ||
-                        content.getFileName().endsWith(".3gp")) {
+                } else if (content.getFileName().endsWith(".mp3")) {
                     audioMessage = content;
                 }
         }
@@ -155,60 +172,48 @@ public class PreviewFrag extends Fragment implements OnPageChangeListener,
             tittle.setText("No booklet found");
         }
 
-        if (audioMessage != null) {
-            fab.setImageResource(R.drawable.ic_pause);
-            playAudio();
-            fab.setOnClickListener(v -> {
-                if (isPlaying && mMediaPlayer.isPlaying()) {
-                    mMediaPlayer.pause();
-                    fab.setImageResource(R.drawable.ic_play);
-                    isPlaying = false;
-                } else if (!isPlaying && !mMediaPlayer.isPlaying()) {
-                    mMediaPlayer.start();
-                    fab.setImageResource(R.drawable.ic_pause);
-                    isPlaying = true;
-                }
-            });
+        if (jcPlayerView.isPlaying() && isResuming) {
+            isResuming = false;
+            jcPlayerView.setPressed(true);
         } else {
-            Toast.makeText(getContext(), "No audio found", Toast.LENGTH_SHORT).show();
+            if (audioMessage != null) {
+                playAudio();
+            } else {
+                Toast.makeText(getContext(), "No audio found", Toast.LENGTH_SHORT).show();
+            }
         }
 
         if (pdfMessage == null && audioMessage == null) {
-            popup.show("Notification", "Sorry, there is no content on your internal memory.");
+            popup.show("Oops!", "Sorry, there is no content on your internal memory.");
             return;
         }
     }
 
     private void playAudio() {
-        boolean isError = false;
         try {
-            //Uri uri = Uri.parse(DirManager.filePath(audioMessage.getFileName()).getAbsolutePath());
-            if (mMediaPlayer != null) {
-                mMediaPlayer.setDataSource(DirManager.filePath(audioMessage.getFileName()).getAbsolutePath());
-                mMediaPlayer.prepare();//prepareAsync
-                mMediaPlayer.setOnPreparedListener(PreviewFrag.this);
-                mMediaPlayer.setOnErrorListener(PreviewFrag.this);
+            if (pdfMessage == null) {
+                RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams) playerHolder.getLayoutParams();
+                layoutParams.height = 360;
+                layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT;
+                playerHolder.setLayoutParams(layoutParams);
+                jcAudio = JcAudio.createFromFilePath(audioMessage.getMessageName(), DirManager.filePath(audioMessage.getFileName()).getAbsolutePath());
+            } else {
+                jcAudio = JcAudio.createFromFilePath("", DirManager.filePath(audioMessage.getFileName()).getAbsolutePath());
             }
-        } catch (IllegalArgumentException e) {
+            ArrayList<JcAudio> jcAudios = new ArrayList<>();
+            jcAudios.add(jcAudio);
+            jcPlayerView.initWithTitlePlaylist(jcAudios, jcAudio.getTitle());
+            jcPlayerView.setJcPlayerManagerListener(PreviewFrag.this);
+            jcPlayerView.createNotification(R.mipmap.ic_launcher);
+        } catch (Exception e) {
             e.printStackTrace();
-            isError = true;
-        } catch (SecurityException e) {
-            e.printStackTrace();
-            isError = true;
-        } catch (IllegalStateException e) {
-            e.printStackTrace();
-            isError = true;
-        } catch (IOException e) {
-            e.printStackTrace();
-            isError = true;
         }
-        if (isError && mMediaPlayer == null) {
-            popup.show("Notification", "There was some error while trying to load the audio.");
-        }
-        playPause();
     }
 
     private void displayPDF() {
+        if (audioMessage == null) {
+            playerHolder.setVisibility(View.GONE);
+        }
         Uri uri = Uri.parse(DirManager.filePath(pdfMessage.getFileName()).getAbsolutePath());
         File file = null;
         try {
@@ -220,34 +225,38 @@ public class PreviewFrag extends Fragment implements OnPageChangeListener,
             e.printStackTrace();
             popup.show("Oops!", "An error has occurred while loading the pdf file.");
         }
-        pdfFileName = message.getMessageName();
-        pdfView.fromFile(file)
-                .defaultPage(pageNumber)
-                .enableSwipe(true)
-
-                .swipeHorizontal(false)
-                .onPageChange(this)
-                .enableAnnotationRendering(true)
-                .onLoad(PreviewFrag.this)
-                .scrollHandle(new DefaultScrollHandle(getContext()))
-                .load();
-    }
-
-    private void playPause() {
-        if (fab != null) {
-            if (mMediaPlayer != null)
-                if (mMediaPlayer.isPlaying())
-                    fab.setImageResource(R.drawable.ic_pause);
-                else
-                    fab.setImageResource(R.drawable.ic_play);
+        try {
+            pdfFileName = message.getMessageName();
+            pdfView.fromFile(file)
+                    .defaultPage(pageNumber)
+                    .enableSwipe(true)
+                    .swipeHorizontal(false)
+                    .onPageChange(this)
+                    .onPageScroll(this)
+                    .enableAnnotationRendering(true)
+                    .onLoad(PreviewFrag.this)
+                    .scrollHandle(new DefaultScrollHandle(getContext()))
+                    .spacing(10)
+                    .enableAntialiasing(true)
+                    .load();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
+
 
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
         super.onSaveInstanceState(savedInstanceState);
+        //PDF
         pageNumber = pdfView.getCurrentPage();
         savedInstanceState.putInt("page", pageNumber);
+
+        //AUDIO
+        savedInstanceState.putLong("position", currentPosition);
+        savedInstanceState.putLong("duration", duration);
+        savedInstanceState.putString("playState", playState.toString());
+        savedInstanceState.putBoolean("resume", true);
     }
 
     /*@Override
@@ -284,25 +293,49 @@ public class PreviewFrag extends Fragment implements OnPageChangeListener,
     @Override
     public void onDestroy() {
         super.onDestroy();
-        if (mMediaPlayer != null) {
-            mMediaPlayer.release();
-        }
-        if (pdfView != null) {
-            pdfView.recycle();
-            pdfView.invalidate();
+        try {
+            if (jcPlayerView != null) {
+                jcPlayerView.kill();
+            }
+            if (pdfView != null) {
+                pdfView.recycle();
+                pdfView.invalidate();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
     @Override
     public void loadComplete(int nbPages) {
-        PdfDocument.Meta meta = pdfView.getDocumentMeta();
-        printBookmarksTree(pdfView.getTableOfContents(), "-");
+        try {
+            PdfDocument.Meta meta = pdfView.getDocumentMeta();
+            printBookmarksTree(pdfView.getTableOfContents(), "-");
+            //pdfView.zoomTo(3);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     public void onPageChanged(int page, int pageCount) {
-        pageNumber = page;
-        tittle.setText(String.format("%s %s / %s", pdfFileName, page + 1, pageCount));
+        try {
+            pageNumber = page;
+            tittle.setText(String.format("%s %s / %s", pdfFileName, page + 1, pageCount));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void onPageScrolled(int page, float positionOffset) {
+        try {
+            pdfView.invalidate();
+            Log.d("onPageScroll", String.valueOf(page));
+            Log.d("onPageScrollOffset", String.valueOf(positionOffset));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public void printBookmarksTree(List<PdfDocument.Bookmark> tree, String sep) {
@@ -316,21 +349,38 @@ public class PreviewFrag extends Fragment implements OnPageChangeListener,
         }
     }
 
+    //JCPlayer error handlers
     @Override
-    public void onPrepared(FFmpegMediaPlayer mp) {
-        mp.start();
-        isPlaying = true;
-        if (fab != null)
-            fab.setImageResource(R.drawable.ic_pause);
+    public void onPreparedAudio(JcStatus jcStatus) {
     }
 
     @Override
-    public boolean onError(FFmpegMediaPlayer mp, int what, int extra) {
-        mp.release();
-        isPlaying = false;
-        if (fab != null)
-            fab.setImageResource(R.drawable.ic_play);
-        return false;
+    public void onCompletedAudio() {
+    }
+
+    @Override
+    public void onPaused(JcStatus jcStatus) {
+    }
+
+    @Override
+    public void onContinueAudio(JcStatus jcStatus) {
+    }
+
+    @Override
+    public void onPlaying(JcStatus jcStatus) {
+    }
+
+    @Override
+    public void onTimeChanged(JcStatus jcStatus) {
+        currentPosition = jcStatus.getCurrentPosition();
+        duration = jcStatus.getDuration();
+        playState = jcStatus.getPlayState();
+    }
+
+    @Override
+    public void onJcpError(Throwable throwable) {
+        throwable.printStackTrace();
+        popup.show("Oops!", "Something went wrong with the audio preparations.");
     }
 
     /**

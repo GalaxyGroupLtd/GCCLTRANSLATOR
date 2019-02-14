@@ -1,9 +1,12 @@
 package com.carpa.library.activities;
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageInfo;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.LayerDrawable;
 import android.os.Bundle;
@@ -18,26 +21,37 @@ import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
+import android.text.SpannableString;
+import android.text.TextUtils;
+import android.text.util.Linkify;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 import com.carpa.library.R;
 import com.carpa.library.config.BroadcastConfig;
 import com.carpa.library.entities.Messages;
+import com.carpa.library.fragment.AddLanguageFrag;
 import com.carpa.library.fragment.DownloadedMessagesFrag;
 import com.carpa.library.fragment.FavoritesFrag;
 import com.carpa.library.fragment.HomeFrag;
 import com.carpa.library.fragment.LanCloudFrag;
+import com.carpa.library.fragment.LanguageContentFrag;
 import com.carpa.library.fragment.LanguagesFrag;
 import com.carpa.library.fragment.NewFrag;
 import com.carpa.library.fragment.PreviewFrag;
 import com.carpa.library.fragment.StreamFrag;
+import com.carpa.library.services.CloudService;
+import com.carpa.library.utilities.ApplicationInitiator;
 import com.carpa.library.utilities.CountDrawable;
+import com.carpa.library.utilities.DownloadTaskListener;
+import com.carpa.library.utilities.MessageCache;
 import com.carpa.library.utilities.Popup;
 import com.carpa.library.utilities.Progress;
 import com.carpa.library.utilities.loader.LocalMessageLoader;
 
+import java.util.Calendar;
 import java.util.List;
 
 public class LibraryHome extends AppCompatActivity
@@ -50,7 +64,10 @@ public class LibraryHome extends AppCompatActivity
         LanguagesFrag.OnLanguageFrag,
         LanCloudFrag.OnLanCloud,
         StreamFrag.OnStreamFrag,
-        DownloadedMessagesFrag.OnDownloadedMessagesFrag {
+        DownloadedMessagesFrag.OnDownloadedMessagesFrag,
+        AddLanguageFrag.OnAddLanguageFrag,
+        LanguageContentFrag.OnLanguageContent,
+        ApplicationInitiator.OnAppInitiated {
 
     private Toolbar toolbar;
     private DrawerLayout drawer;
@@ -60,6 +77,12 @@ public class LibraryHome extends AppCompatActivity
     private MenuItem item;
     private Menu defaultMenu;
     private LocalMessageLoader messageLoader;
+
+    private Intent alarmIntent;
+    private PendingIntent pendingIntent;
+    private AlarmManager alarm;
+
+    private boolean initiating = true, showAppInitProgress = false;
 
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
@@ -90,7 +113,7 @@ public class LibraryHome extends AppCompatActivity
         setSupportActionBar(toolbar);
 
         popup = new Popup(LibraryHome.this);
-        progress = new Progress(LibraryHome.this, false, false);
+        progress = new Progress(LibraryHome.this, false, true);
 
         drawer = findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -100,11 +123,28 @@ public class LibraryHome extends AppCompatActivity
 
         navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
+
+        //load all message into the cache
+        if (!initiating) {
+            progress.show("Initiating...");
+            messageLoader = new LocalMessageLoader(LibraryHome.this);
+            messageLoader.loadAll();
+        }
+
         if (findViewById(R.id.fragment_container) != null) {
             if (savedInstanceState != null) {
                 return;
             }
-            fragmentHandler(HomeFrag.newInstance());
+            if (!initiating)
+                fragmentHandler(LanguageContentFrag.newInstance());
+            ApplicationInitiator ai = new ApplicationInitiator(LibraryHome.this, this);
+            ai.start();
+        }
+
+        //schedule activity
+        if (!DownloadTaskListener.isScheduled()) {
+            Log.d("SCHEDULE", "Missed Boot, reinitialise download tasks");
+            scheduleAlarm();
         }
     }
 
@@ -144,6 +184,20 @@ public class LibraryHome extends AppCompatActivity
             }
         }
         homeContext(getSupportFragmentManager().findFragmentById(R.id.fragment_container));
+    }
+
+    public void scheduleAlarm() {
+        DownloadTaskListener.setSchedule(true);
+        Log.d("SCHEDULE", "Scheduling download task");
+        Calendar cal = Calendar.getInstance();
+        alarmIntent = new Intent(LibraryHome.this, CloudService.class);
+        alarmIntent.setAction(CloudService.ACTION_SYNC);
+        pendingIntent = PendingIntent.getService(LibraryHome.this,
+                999,
+                alarmIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT);
+        alarm = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        alarm.setInexactRepeating(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), CloudService.PERIOD, pendingIntent);
     }
 
     private void fragmentHandler(Fragment fragment) {
@@ -261,7 +315,7 @@ public class LibraryHome extends AppCompatActivity
         int id = item.getItemId();
 
         if (id == R.id.nav_home) {
-            fragmentHandler(HomeFrag.newInstance());
+            fragmentHandler(LanguageContentFrag.newInstance());
         } else if (id == R.id.nav_favorites) {
             fragmentHandler(FavoritesFrag.newInstance());
         } else if (id == R.id.nav_new) {
@@ -270,6 +324,11 @@ public class LibraryHome extends AppCompatActivity
             fragmentHandler(DownloadedMessagesFrag.newInstance());
         } else if (id == R.id.nav_cloud) {
             fragmentHandler(LanguagesFrag.newInstance());
+        } else if (id == R.id.nav_settings) {
+            fragmentHandler(AddLanguageFrag.newInstance());
+        } else if (id == R.id.nav_about) {
+            //About
+            about();
         }
 
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
@@ -305,23 +364,63 @@ public class LibraryHome extends AppCompatActivity
     }
 
     @Override
-    public void onNewMessage() {
-        messageLoader = new LocalMessageLoader(LibraryHome.this);
+    public void onNewDecrement(int decrement) {
+        loadMessagesForBadge();
+    }
+
+    private void loadMessagesForBadge() {
+        messageLoader = new LocalMessageLoader(new LocalMessageLoader.OnLocalMessagesLoader() {
+            @Override
+            public void onLocalMessages(boolean isLoaded, String message, List<Messages> messages) {
+                if (!isLoaded)
+                    return;
+                else {
+                    if (messages.isEmpty())
+                        setCount("0");
+                    else
+                        setCount(String.valueOf(messages.size()));
+                }
+            }
+        });
         messageLoader.loadNew();
     }
 
     @Override
-    public void onLocalMessages(boolean isLoaded, String message, List<Messages> messages) {
-        if (!isLoaded)
-            return;
-
-        if (message != null && message.isEmpty())
-            return;
-        //Update count badge
-        setCount(LibraryHome.this, messages.size() + "");
+    public void onNewMessage() {
+        messageLoader = new LocalMessageLoader(LibraryHome.this);
+        messageLoader.loadAll();
     }
 
-    public void setCount(Context context, String count) {
+    @Override
+    public void onLocalMessages(boolean isLoaded, String message, List<Messages> messages) {
+        initiating = false;
+        if (progress != null)
+            progress.clear();
+
+        if (!isLoaded) {
+            if (!TextUtils.isEmpty(message)) {
+                popup.show("Oop!", message);
+            }
+            return;
+        }
+        if (!MessageCache.isAdding)
+            MessageCache.addAll(messages);
+
+        loadMessagesForBadge();
+
+        if (!initiating) {
+            Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
+            if (fragment != null && !(fragment instanceof PreviewFrag)) {
+                //make an update
+                fragmentHandler(LanguageContentFrag.newInstance());
+            } else if (fragment == null) {
+                fragmentHandler(LanguageContentFrag.newInstance());
+            }
+
+        }
+    }
+
+    public void setCount(String numOfNewMessages) {
         MenuItem menuItem = defaultMenu.findItem(R.id.notifications);
         LayerDrawable icon = (LayerDrawable) menuItem.getIcon();
 
@@ -332,11 +431,60 @@ public class LibraryHome extends AppCompatActivity
         if (reuse != null && reuse instanceof CountDrawable) {
             badge = (CountDrawable) reuse;
         } else {
-            badge = new CountDrawable(context);
+            badge = new CountDrawable(LibraryHome.this);
         }
 
-        badge.setCount(count);
+        badge.setCount(numOfNewMessages);
         icon.mutate();
         icon.setDrawableByLayerId(R.id.ic_group_count, badge);
+    }
+
+    public void about() {
+        try {
+            PackageInfo pInfo = LibraryHome.this.getPackageManager().getPackageInfo(getPackageName(), 0);
+            String version = pInfo.versionName;
+            int verCode = pInfo.versionCode;
+            StringBuilder sb = new StringBuilder();
+            sb.append("LIBRARY APP").append("\n\n");
+            sb.append("Version name: ").append(version).append("\n");
+            sb.append("Version code: ").append(verCode).append("\n\n");
+            sb.append("If you found any bug or have an idea on improvement, feel free to send us an email on:").append("\n");
+
+            SpannableString s = new SpannableString("iaubain@yahoo.fr");
+            Linkify.addLinks(s, Linkify.EMAIL_ADDRESSES);
+            sb.append("-").append(s).append("\n");
+            s = new SpannableString("ethangraphic@gmail.com");
+            Linkify.addLinks(s, Linkify.EMAIL_ADDRESSES);
+            sb.append("-").append(s).append("\n");
+            sb.append("or contact us on\n");
+            s = new SpannableString("+250 785 534 672");
+            Linkify.addLinks(s, Linkify.PHONE_NUMBERS);
+            sb.append(s).append("\n");
+
+            popup.show("About", sb.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(LibraryHome.this, "Oops! Something went wrong", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    public void onAppInitiated(boolean isInitiated, String message) {
+        if(!showAppInitProgress)
+            return;
+        if(!isInitiated)
+            popup.show("Oops!", message);
+        else{
+            popup.show("Info", message);
+        }
+    }
+
+    @Override
+    public void onInitiationProgress(int progre, Object extra) {
+        if(!showAppInitProgress)
+            return;
+        if(progress != null){
+            progress.update(extra.toString());
+        }
     }
 }

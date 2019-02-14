@@ -15,7 +15,7 @@ import android.widget.TextView;
 import com.carpa.library.R;
 import com.carpa.library.config.ExtraConfig;
 import com.carpa.library.entities.Messages;
-import com.carpa.library.utilities.MessageNameFactory;
+import com.carpa.library.utilities.DataFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,7 +47,8 @@ public class FavoriteAdapter extends RecyclerView.Adapter<FavoriteAdapter.MyView
     public void onBindViewHolder(final MyViewHolder holder, int position) {
         final Messages mContent = (Messages) this.mMessageContent.get(position);
         holder.title.setText(mContent.display());
-        holder.caption.setText(MessageNameFactory.messageDate(mContent.getMessageName()));
+        String messageDate = DataFactory.formatDate(mContent.getMessageDate());
+        holder.caption.setText(messageDate);
 
         holder.icon.setOnClickListener(new View.OnClickListener() {
             @Override
