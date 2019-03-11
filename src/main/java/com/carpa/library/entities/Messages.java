@@ -12,7 +12,6 @@ import java.util.Date;
 import java.util.Locale;
 
 public class Messages extends UtilAbstractModelORM<Messages> implements UtilModel, Serializable {
-    private long id;
     private String messageName;
     private String fileName;
     private Date messageDate;
@@ -29,9 +28,8 @@ public class Messages extends UtilAbstractModelORM<Messages> implements UtilMode
         super(Messages.class);
     }
 
-    public Messages(long id, String messageName, String fileName, Date messageDate, String extension, String path, String fileSize, String lastModified, boolean isFavorite, String downloadId, boolean isNew, boolean isDownload) {
+    public Messages(String messageName, String fileName, Date messageDate, String extension, String path, String fileSize, String lastModified, boolean isFavorite, String downloadId, boolean isNew, boolean isDownload) {
         super(Messages.class);
-        this.id = id;
         this.messageName = messageName;
         this.fileName = fileName;
         this.messageDate = messageDate;
@@ -85,10 +83,6 @@ public class Messages extends UtilAbstractModelORM<Messages> implements UtilMode
         this.messageName = messageName;
     }
 
-    public void setId(long id) {
-        this.id = id;
-    }
-
     public String getFileName() {
         return fileName;
     }
@@ -140,7 +134,7 @@ public class Messages extends UtilAbstractModelORM<Messages> implements UtilMode
     @Override
     public String toString() {
         return "Messages{" +
-                "id=" + id +
+                "id=" + getId() +
                 ", messageName='" + messageName + '\'' +
                 ", fileName='" + fileName + '\'' +
                 ", messageDate=" + DataFactory.formatDate(messageDate) +
@@ -185,6 +179,8 @@ public class Messages extends UtilAbstractModelORM<Messages> implements UtilMode
 
     @Override
     public int hashCode() {
+        if(getId() == null)
+            setId((long) 0);
         int result = (int) (getId() ^ (getId() >>> 32));
         result = 31 * result + (getMessageName() != null ? getMessageName().hashCode() : 0);
         result = 31 * result + (getFileName() != null ? getFileName().hashCode() : 0);
@@ -205,13 +201,13 @@ public class Messages extends UtilAbstractModelORM<Messages> implements UtilMode
         String display = messageName + "\n";
         try {
             SimpleDateFormat sFormat = new SimpleDateFormat("yyy-MM-dd", Locale.getDefault());
-            Date date = sFormat.parse(MessageNameFactory.messageDate(messageName));
+            Date date = sFormat.parse(MessageNameFactory.messageDate(fileName));
             String fDate = sFormat.format(date);
 
             display += "Date: " + fDate + "\n";
         } catch (ParseException e) {
             e.printStackTrace();
-            display += "Date: " + MessageNameFactory.messageDate(messageName) + "\n";
+            display += "Date: " + messageName + "\n";
         }
         if (extension != null) {
             display += "File type: ";

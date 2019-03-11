@@ -53,8 +53,8 @@
 
                 <ImageView
                     android:id="@+id/overflow"
-                    android:layout_width="wrap_content"
-                    android:layout_height="27dp"
+                    android:layout_width="30dp"
+                    android:layout_height="50dp"
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
                     android:src="@drawable/ic_overflow" />

@@ -18,6 +18,7 @@ import com.carpa.library.utilities.DeviceIdentity;
 import com.carpa.library.utilities.DirManager;
 import com.carpa.library.utilities.Popup;
 import com.carpa.library.utilities.Progress;
+import com.carpa.library.utilities.SDCardFinder;
 import com.carpa.library.utilities.loader.FilterLoader;
 import com.karumi.dexter.Dexter;
 import com.karumi.dexter.MultiplePermissionsReport;
@@ -49,6 +50,7 @@ public class Home extends AppCompatActivity implements Popup.OnPopAction, Filter
 
         //Check root directory
         try {
+            new SDCardFinder(Home.this);
             DirManager.rootDir();
         } catch (Exception e) {
             e.printStackTrace();

@@ -81,6 +81,10 @@ public class CountDrawable extends Drawable {
         invalidateSelf();
     }
 
+    public String getCount() {
+        return mCount;
+    }
+
     @Override
     public void setAlpha(int alpha) {
         // do nothing

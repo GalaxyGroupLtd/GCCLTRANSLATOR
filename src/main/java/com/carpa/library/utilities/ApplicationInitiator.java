@@ -14,6 +14,7 @@ import java.util.List;
 public class ApplicationInitiator {
     private Context context;
     private OnAppInitiated mListener;
+    public static boolean INITIATING = false;
 
     public ApplicationInitiator(Context context, OnAppInitiated mListener) {
         this.context = context;
@@ -21,7 +22,8 @@ public class ApplicationInitiator {
     }
 
     public void start() {
-
+        INITIATING = true;
+        new Loader().execute();
     }
 
     public interface OnAppInitiated {
@@ -38,7 +40,7 @@ public class ApplicationInitiator {
         @Override
         protected Boolean doInBackground(String... param) {
             try {
-                mFiles = DirManager.listFiles(true, true, DirManager.getRoot());
+                mFiles = DirManager.listFiles(true, true, DirManager.getRootSD());
                 totalTask = mFiles.size();
                 int tTask = totalTask;
                 onProgressUpdate(totalTask);
@@ -91,6 +93,7 @@ public class ApplicationInitiator {
 
         @Override
         protected void onPostExecute(Boolean isInitiated) {
+            INITIATING = false;
             if (!isInitiated) {
                 if (!errorMessage.isEmpty()) {
                     mListener.onAppInitiated(false, errorMessage);

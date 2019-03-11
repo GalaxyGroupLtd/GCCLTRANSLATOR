@@ -15,6 +15,7 @@
             android:layout_width="30dp"
             android:layout_height="30dp"
             android:alpha=".60"
+            android:id="@+id/icn"
             android:src="@drawable/ic_home" />
 
         <android.support.v4.widget.SwipeRefreshLayout

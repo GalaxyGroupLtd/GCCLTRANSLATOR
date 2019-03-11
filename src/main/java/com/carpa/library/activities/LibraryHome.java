@@ -49,6 +49,7 @@ import com.carpa.library.utilities.DownloadTaskListener;
 import com.carpa.library.utilities.MessageCache;
 import com.carpa.library.utilities.Popup;
 import com.carpa.library.utilities.Progress;
+import com.carpa.library.utilities.SDCardFinder;
 import com.carpa.library.utilities.loader.LocalMessageLoader;
 
 import java.util.Calendar;
@@ -124,6 +125,11 @@ public class LibraryHome extends AppCompatActivity
         navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
+        if(SDCardFinder.sdCardPath == null){
+           new SDCardFinder(LibraryHome.this);
+           //Toast.makeText(LibraryHome.this, "SDcard: "+SDCardFinder.sdCardPath, Toast.LENGTH_LONG).show();
+        }
+
         //load all message into the cache
         if (!initiating) {
             progress.show("Initiating...");
@@ -137,6 +143,7 @@ public class LibraryHome extends AppCompatActivity
             }
             if (!initiating)
                 fragmentHandler(LanguageContentFrag.newInstance());
+
             ApplicationInitiator ai = new ApplicationInitiator(LibraryHome.this, this);
             ai.start();
         }
@@ -369,6 +376,12 @@ public class LibraryHome extends AppCompatActivity
     }
 
     private void loadMessagesForBadge() {
+        try {
+            int msg = Integer.parseInt(getCount());
+            setCount((msg-1)+"");
+        }catch (Exception e){
+            e.printStackTrace();
+        }
         messageLoader = new LocalMessageLoader(new LocalMessageLoader.OnLocalMessagesLoader() {
             @Override
             public void onLocalMessages(boolean isLoaded, String message, List<Messages> messages) {
@@ -438,6 +451,22 @@ public class LibraryHome extends AppCompatActivity
         icon.mutate();
         icon.setDrawableByLayerId(R.id.ic_group_count, badge);
     }
+    public String getCount() {
+        MenuItem menuItem = defaultMenu.findItem(R.id.notifications);
+        LayerDrawable icon = (LayerDrawable) menuItem.getIcon();
+
+        CountDrawable badge;
+
+        // Reuse drawable if possible
+        Drawable reuse = icon.findDrawableByLayerId(R.id.ic_group_count);
+        if (reuse != null && reuse instanceof CountDrawable) {
+            badge = (CountDrawable) reuse;
+        } else {
+            badge = new CountDrawable(LibraryHome.this);
+        }
+
+        return badge.getCount();
+    }
 
     public void about() {
         try {
@@ -481,6 +510,7 @@ public class LibraryHome extends AppCompatActivity
 
     @Override
     public void onInitiationProgress(int progre, Object extra) {
+        //Toast.makeText(LibraryHome.this, extra.toString(), Toast.LENGTH_SHORT).show();
         if(!showAppInitProgress)
             return;
         if(progress != null){

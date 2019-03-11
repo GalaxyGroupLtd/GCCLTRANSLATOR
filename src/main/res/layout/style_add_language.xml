@@ -7,7 +7,7 @@
 
     <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="50dp"
         android:padding="3dp">
 
         <TextView
@@ -19,7 +19,7 @@
             android:layout_centerVertical="true"
             android:layout_toStartOf="@+id/checkBox"
             android:textColor="@color/colorPrimaryDark"
-            android:textSize="15sp"
+            android:textSize="21sp"
             android:textStyle="bold" />
 
         <CheckBox

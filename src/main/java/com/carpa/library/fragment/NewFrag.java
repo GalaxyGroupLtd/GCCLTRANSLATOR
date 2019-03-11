@@ -118,15 +118,7 @@ public class NewFrag extends Fragment implements MessageAdapter.OnMessageAdapter
     public void onMessageAdapter(boolean isClicked, View view, Object object, String action) {
         if (action == null)
             return;
-        mListener.onNewDecrement(1);
         Messages message = (Messages) object;
-        message.setNew(false);
-        adapter.removeItem(message);
-        try {
-            message.save();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
         switch (action) {
             case ExtraConfig.MESSAGE_FAVORITE:
                 message.setFavorite(true);
@@ -136,6 +128,15 @@ public class NewFrag extends Fragment implements MessageAdapter.OnMessageAdapter
                 } else {
                     Snackbar.make(recycler, message.getMessageName() + " Added to favorites", Snackbar.LENGTH_SHORT).setAction("Action", null).show();
                 }
+                mMessages.remove(message);
+                message.setNew(false);
+                adapter.removeItem(message);
+                try {
+                    message.save();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                mListener.onNewDecrement(1);
                 break;
             case ExtraConfig.MESSAGE_INFO:
                 popup.show("INFO", ((Messages) object).details());
@@ -148,6 +149,15 @@ public class NewFrag extends Fragment implements MessageAdapter.OnMessageAdapter
                     e.printStackTrace();
                     popup.show("Oops", "Something went wrong and we couldn't view the message for the moment.");
                 }
+                mMessages.remove(message);
+                message.setNew(false);
+                adapter.removeItem(message);
+                try {
+                    message.save();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                mListener.onNewDecrement(1);
                 break;
         }
     }

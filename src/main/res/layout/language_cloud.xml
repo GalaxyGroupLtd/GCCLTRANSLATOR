@@ -11,19 +11,31 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <android.support.v4.widget.SwipeRefreshLayout
-            android:id="@+id/swipe"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
+        <ImageView
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:alpha=".60"
+            android:src="@drawable/ic_file" />
 
-            <android.support.v7.widget.RecyclerView
-                android:id="@+id/recycler"
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <android.support.v4.widget.SwipeRefreshLayout
+                android:id="@+id/swipe"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_marginBottom="8dp"
-                android:layout_marginEnd="8dp"
-                android:layout_marginStart="8dp"
-                android:layout_marginTop="8dp" />
-        </android.support.v4.widget.SwipeRefreshLayout>
+                android:layout_height="match_parent">
+
+                <android.support.v7.widget.RecyclerView
+                    android:id="@+id/recycler"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginBottom="8dp"
+                    android:layout_marginEnd="8dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginTop="8dp" />
+            </android.support.v4.widget.SwipeRefreshLayout>
+        </LinearLayout>
     </LinearLayout>
 </FrameLayout>

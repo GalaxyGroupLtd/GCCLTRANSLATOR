@@ -69,7 +69,7 @@ public class PreviewFrag extends Fragment implements OnPageChangeListener,
     private JcStatus.PlayState playState = JcStatus.PlayState.PREPARING;
     private boolean isResuming = false;
     private JcAudio jcAudio;
-    private String pdfFileName;
+    private String pdfFileName, audioFileName;
     private Messages message;
     private Messages pdfMessage;
     private Messages audioMessage;
@@ -198,13 +198,15 @@ public class PreviewFrag extends Fragment implements OnPageChangeListener,
                 playerHolder.setLayoutParams(layoutParams);
                 jcAudio = JcAudio.createFromFilePath(audioMessage.getMessageName(), DirManager.filePath(audioMessage.getFileName()).getAbsolutePath());
             } else {
-                jcAudio = JcAudio.createFromFilePath("", DirManager.filePath(audioMessage.getFileName()).getAbsolutePath());
+                jcAudio = JcAudio.createFromFilePath(DirManager.filePath(audioMessage.getFileName()).getAbsolutePath());
             }
             ArrayList<JcAudio> jcAudios = new ArrayList<>();
             jcAudios.add(jcAudio);
-            jcPlayerView.initWithTitlePlaylist(jcAudios, jcAudio.getTitle());
+            jcPlayerView.addAudio(jcAudio);
+            jcPlayerView.initWithTitlePlaylist(jcAudios, message.getMessageName());
+            //jcPlayerView.initAnonPlaylist(jcAudios);
             jcPlayerView.setJcPlayerManagerListener(PreviewFrag.this);
-            jcPlayerView.createNotification(R.mipmap.ic_launcher);
+            jcPlayerView.createNotification();//R.drawable.ic_notification
         } catch (Exception e) {
             e.printStackTrace();
         }

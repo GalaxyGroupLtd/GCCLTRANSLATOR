@@ -15,6 +15,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.carpa.library.R;
@@ -58,6 +59,7 @@ public class LanguageContentFrag extends Fragment implements LocalLanguagesLoade
     private Progress progress;
     private RecyclerView recycler;
     private SwipeRefreshLayout swipe;
+    private ImageView icn;
     private static List<Languages> mLanguages = new ArrayList<>();
     private LocalLanguagesLoader languagesLoader;
     private MyLanguageAdapter adapter;
@@ -109,6 +111,8 @@ public class LanguageContentFrag extends Fragment implements LocalLanguagesLoade
         progress = new Progress(getContext(), false, false);
         recycler = view.findViewById(R.id.recycler);
         swipe = view.findViewById(R.id.swipe);
+        icn = view.findViewById(R.id.icn);
+        icn.setImageResource(R.drawable.ic_home);
         swipe.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {

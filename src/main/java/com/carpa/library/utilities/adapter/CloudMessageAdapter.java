@@ -207,6 +207,7 @@ public class CloudMessageAdapter extends RecyclerView.Adapter<CloudMessageAdapte
                                 messages.save();
                             }
                         } catch (Exception e) {
+                            Toast.makeText(context, e.getMessage(), Toast.LENGTH_LONG).show();
                             e.printStackTrace();
                             Toast.makeText(context, "Something went wrong", Toast.LENGTH_LONG).show();
                         }
@@ -270,7 +271,7 @@ public class CloudMessageAdapter extends RecyclerView.Adapter<CloudMessageAdapte
 
         @Override
         public void onDownloadCanceled(int downloadId) {
-            downloadId = 0;
+            this.downloadId = 0;
             if (progressBar != null && downloadHolder != null) {
                 progressBar.setIndeterminate(false);
                 downloadHolder.setVisibility(View.GONE);

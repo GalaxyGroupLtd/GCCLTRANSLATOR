@@ -22,16 +22,20 @@ public class MessageCache {
             isAdding = true;
         else
             return;
+
         for (Messages message : mMessages) {
             if (mCache.containsKey(message.getMessageName())) {
                 //add to the list this new message
                 List<Messages> content = new ArrayList<>(mCache.get(message.getMessageName()));
                 try {
-                    for (Messages mContent : content) {
-                        if (!mContent.getFileName().equals(message.getFileName()))
+                    List<Messages> temp = new ArrayList<>();
+                    temp.addAll(content);
+                    for (Messages mContent : temp) {
+                        if (content.size() <= 2 && !mContent.getFileName().equals(message.getFileName()))
                             content.add(message);
                     }
-                    mCache.put(message.getMessageName(), content);
+                    if (content.size() <= 2)
+                        mCache.put(message.getMessageName(), content);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -48,6 +52,8 @@ public class MessageCache {
         if (mCache.containsKey(message.getMessageName())) {
             //add to the list this new message
             List<Messages> content = mCache.get(message.getMessageName());
+            if(content.size() <2 )
+                return;
             for (Messages messages : content) {
                 try {
                     if (!messages.getFileName().equals(message.getFileName()))

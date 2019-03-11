@@ -11,6 +11,7 @@ import com.carpa.library.entities.Languages;
 import com.carpa.library.entities.Messages;
 import com.carpa.library.entities.facade.LanguageFacade;
 import com.carpa.library.entities.facade.MessagesFacade;
+import com.carpa.library.utilities.ApplicationInitiator;
 import com.carpa.library.utilities.DataFactory;
 import com.carpa.library.utilities.DeviceIdentity;
 import com.carpa.library.utilities.DirManager;
@@ -104,6 +105,8 @@ public class CloudService extends IntentService implements LocalMessageLoader.On
     }
 
     private void loadMessages() {
+        if(ApplicationInitiator.INITIATING)
+            return;
         for (Languages languages : languagesList) {
             filterLoader = new FilterLoader(CloudService.this, CloudService.this, CmdConfig.GET_LANGUAGE_CONTENT.toString(), DeviceIdentity.getCountryCode(CloudService.this), languages.getLanguageName());
             filterLoader.start();

@@ -10,9 +10,14 @@ import java.util.Locale;
 
 public class DirManager {
     public static final String ROOT = "GCCL_LIBRARY";
-    public static final String STORAGE_ENVIRONMENT = SDPath();
+    public static final String STORAGE_ENVIRONMENT = DEFAULT_PATH();
 
     public static String getRoot() {
+        File mFile = new File(STORAGE_ENVIRONMENT, ROOT);
+        return mFile.getAbsolutePath();
+    }
+
+    public static String getRootSD() {
         File mFile = new File(STORAGE_ENVIRONMENT, ROOT);
         return mFile.getAbsolutePath();
     }
@@ -77,7 +82,7 @@ public class DirManager {
                     resultList.add(file);
                 System.out.println(file.getAbsolutePath());
             } else if (file.isDirectory()) {
-                if(!isOnlyFiles)
+                if (!isOnlyFiles)
                     resultList.add(file);
                 resultList.addAll(listFiles(false, isOnlyFiles, file.getAbsolutePath()));
             }
@@ -85,8 +90,10 @@ public class DirManager {
         return resultList;
     }
 
-    public static String SDPath() {
+    public static String SDPathg() {
         String sdcardpath = "";
+        if (SDCardFinder.sdCardPath != null)
+            return SDCardFinder.sdCardPath;
 
         //Datas
         if (new File("/data/sdext4/").exists() && new File("/data/sdext4/").canRead()) {
@@ -107,26 +114,35 @@ public class DirManager {
 
         //MNTS
 
-        if (new File("mnt/sdcard/external_sd/").exists() && new File("mnt/sdcard/external_sd/").canRead()) {
-            sdcardpath = "mnt/sdcard/external_sd/";
+        if (new File("/mnt/sdcard/external_sd/").exists() && new File("/mnt/sdcard/external_sd/").canRead()) {
+            sdcardpath = "/mnt/sdcard/external_sd/";
         }
-        if (new File("mnt/extsdcard/").exists() && new File("mnt/extsdcard/").canRead()) {
-            sdcardpath = "mnt/extsdcard/";
+        if (new File("/mnt/extsdcard/").exists() && new File("/mnt/extsdcard/").canRead()) {
+            sdcardpath = "/mnt/extsdcard/";
         }
-        if (new File("mnt/external_sd/").exists() && new File("mnt/external_sd/").canRead()) {
-            sdcardpath = "mnt/external_sd/";
+        if (new File("/mnt/external_sd/").exists() && new File("/mnt/external_sd/").canRead()) {
+            sdcardpath = "/mnt/external_sd/";
         }
-        if (new File("mnt/emmc/").exists() && new File("mnt/emmc/").canRead()) {
-            sdcardpath = "mnt/emmc/";
+        if (new File("/mnt/emmc/").exists() && new File("/mnt/emmc/").canRead()) {
+            sdcardpath = "/mnt/emmc/";
         }
-        if (new File("mnt/sdcard0/").exists() && new File("mnt/sdcard0/").canRead()) {
-            sdcardpath = "mnt/sdcard0/";
+        if (new File("/mnt/sdcard0/").exists() && new File("/mnt/sdcard0/").canRead()) {
+            sdcardpath = "/mnt/sdcard0/";
         }
-        if (new File("mnt/sdcard1/").exists() && new File("mnt/sdcard1/").canRead()) {
-            sdcardpath = "mnt/sdcard1/";
+        if (new File("/mnt/sdcard1/").exists() && new File("/mnt/sdcard1/").canRead()) {
+            sdcardpath = "/mnt/sdcard1/";
         }
-        if (new File("mnt/sdcard/").exists() && new File("mnt/sdcard/").canRead()) {
-            sdcardpath = "mnt/sdcard/";
+        if (new File("/mnt/sdcard/").exists() && new File("/mnt/sdcard/").canRead()) {
+            sdcardpath = "/mnt/sdcard/";
+        }
+        if (new File("/mnt/extsdcard").exists() && new File("/mnt/extsdcard").canRead()) {
+            sdcardpath = "/mnt/extsdcard";
+        }
+        if (new File("/mnt/media_rw/sdcard1").exists() && new File("/mnt/media_rw/sdcard1").canRead()) {
+            sdcardpath = "/mnt/media_rw/sdcard1";
+        }
+        if (new File("/removable/microsd").exists() && new File("/removable/microsd").canRead()) {
+            sdcardpath = "/removable/microsd";
         }
 
         //Storages
@@ -145,12 +161,25 @@ public class DirManager {
         if (new File("/storage/sdcard0/").exists() && new File("/storage/sdcard0/").canRead()) {
             sdcardpath = "/storage/sdcard0/";
         }
+        if (new File("/storage/extsdcard").exists() && new File("/storage/extsdcard").canRead()) {
+            sdcardpath = "/storage/extsdcard";
+        }
         if (new File("/storage/sdcard/").exists() && new File("/storage/sdcard/").canRead()) {
             sdcardpath = "/storage/sdcard/";
         }
-        if (sdcardpath.contentEquals("")) {
+        if (new File("/storage/extSdCard/").exists() && new File("/storage/extSdCard/").canRead()) {
+            sdcardpath = "/storage/extSdCard/";
+        }
+
+
+        if (sdcardpath.equals("")) {
             sdcardpath = Environment.getExternalStorageDirectory().getAbsolutePath();
         }
         return sdcardpath;
+    }
+
+    public static String DEFAULT_PATH() {
+        return Environment.getExternalStorageDirectory().getAbsolutePath();
+
     }
 }
