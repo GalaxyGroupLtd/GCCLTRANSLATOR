@@ -40,7 +40,11 @@ public class DirManager {
     }
 
     public static boolean isFileExist(String fileName) {
-        return new File(STORAGE_ENVIRONMENT, ROOT + File.separatorChar + fileName).exists();
+        if (new File(STORAGE_ENVIRONMENT, ROOT + File.separatorChar + fileName).exists())
+            return true;
+        if (new File(SDPathg(), ROOT + File.separatorChar + fileName).exists())
+            return true;
+        return false;
     }
 
     public static List<File> listFiles() throws Exception {
@@ -51,7 +55,11 @@ public class DirManager {
     }
 
     public static File filePath(String fileName) {
-        return new File(STORAGE_ENVIRONMENT, ROOT + File.separatorChar + fileName);
+        if (new File(STORAGE_ENVIRONMENT, ROOT + File.separatorChar + fileName).exists())
+            return new File(STORAGE_ENVIRONMENT, ROOT + File.separatorChar + fileName);
+        if(new File(SDPathg(), ROOT + File.separatorChar + fileName).exists())
+            return new File(SDPathg(), ROOT + File.separatorChar + fileName);
+        return null;
     }
 
     public static String getProgressDisplayLine(long currentBytes, long totalBytes) {
@@ -180,6 +188,5 @@ public class DirManager {
 
     public static String DEFAULT_PATH() {
         return Environment.getExternalStorageDirectory().getAbsolutePath();
-
     }
 }
